@@ -283,6 +283,55 @@ def schedule_view():
     )
 
 
+@bp.route("/schedule/list")
+@login_required
+def schedule_list_view():
+    today = datetime.now()
+    year = request.args.get("year", type=int, default=today.year)
+    month = request.args.get("month", type=int, default=today.month)
+    if month < 1:
+        month, year = 12, year - 1
+    elif month > 12:
+        month, year = 1, year + 1
+
+    department_id = request.args.get("department_id", type=int)
+
+    query = visible_tasks_query().filter(Task.task_type == TASK_TYPE_NETWORK_SCHEDULE)
+    if department_id:
+        query = query.filter(Task.department_id == department_id)
+
+    tasks = sorted(
+        (t for t in query.all() if t.deadline.year == year and t.deadline.month == month),
+        key=lambda t: t.deadline,
+    )
+    completable_ids = {t.id for t in tasks if not t.is_done and can_complete_task(t)}
+
+    prev_month, prev_year = (12, year - 1) if month == 1 else (month - 1, year)
+    next_month, next_year = (1, year + 1) if month == 12 else (month + 1, year)
+
+    departments = (
+        Department.query.order_by(Department.name).all()
+        if current_user.role == ROLE_ADMIN
+        else []
+    )
+
+    return render_template(
+        "tasks/schedule_list.html",
+        tasks=tasks,
+        completable_ids=completable_ids,
+        departments=departments,
+        filters={"department_id": department_id},
+        year=year,
+        month=month,
+        month_name=RU_MONTH_NAMES[month],
+        prev_month=prev_month,
+        prev_year=prev_year,
+        next_month=next_month,
+        next_year=next_year,
+        can_manage_schedule=user_can_manage_schedule(current_user),
+    )
+
+
 @bp.route("/schedule/clone", methods=["POST"])
 @login_required
 def clone_schedule():

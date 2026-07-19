@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Сетевой график — список{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <a class="btn btn-outline-secondary" href="{{ url_for('tasks.schedule_list_view', year=prev_year, month=prev_month, department_id=filters.department_id) }}">&laquo; Пред.</a>
+  <h3 class="mb-0">Сетевой график — {{ month_name }} {{ year }}</h3>
+  <a class="btn btn-outline-secondary" href="{{ url_for('tasks.schedule_list_view', year=next_year, month=next_month, department_id=filters.department_id) }}">След. &raquo;</a>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <div class="btn-group" role="group">
+    <a href="{{ url_for('tasks.schedule_list_view', year=year, month=month) }}" class="btn btn-primary btn-sm">Список</a>
+    <a href="{{ url_for('tasks.schedule_view', year=year, month=month) }}" class="btn btn-outline-primary btn-sm">Календарь</a>
+  </div>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-primary btn-sm" href="{{ url_for('tasks.export_schedule', year=year, month=month) }}">Скачать в Excel</a>
+    {% if can_manage_schedule %}
+    <form method="post" action="{{ url_for('tasks.clone_schedule', year=year, month=month) }}" onsubmit="return confirm('Создать график на следующий месяц на основе текущего?');">
+      <button type="submit" class="btn btn-outline-success btn-sm">Создать график на следующий месяц</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+{% if departments %}
+<form method="get" class="row g-2 mb-3 align-items-end">
+  <input type="hidden" name="year" value="{{ year }}">
+  <input type="hidden" name="month" value="{{ month }}">
+  <div class="col-auto">
+    <label class="form-label">Подразделение</label>
+    <select name="department_id" class="form-select" onchange="this.form.submit()">
+      <option value="">Все</option>
+      {% for d in departments %}
+      <option value="{{ d.id }}" {% if filters.department_id == d.id %}selected{% endif %}>{{ d.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+</form>
+{% endif %}
+
+<div class="table-responsive">
+<table class="table table-hover align-middle">
+  <thead>
+    <tr>
+      <th></th>
+      <th>Мероприятия</th>
+      <th>Подразделение</th>
+      <th>Исполнитель</th>
+      <th>Срок исполнения</th>
+      <th>Статус</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for task in tasks %}
+    <tr>
+      <td><span class="status-dot status-{{ task.status_color }}"></span></td>
+      <td><a href="{{ url_for('tasks.view_task', task_id=task.id) }}">{{ task.title }}</a></td>
+      <td>{{ task.department.name if task.department else "—" }}</td>
+      <td>{{ task.assignee.full_name if task.assignee else "—" }}</td>
+      <td>{{ task.deadline.strftime("%d.%m.%Y %H:%M") }}</td>
+      <td>
+        {% if task.is_done %}
+        <span class="badge bg-success">✓ Выполнено</span>
+        {% else %}
+        <span class="badge bg-{{ task.status_color }}">{{ task.status_label }}</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if task.id in completable_ids %}
+        <form method="post" action="{{ url_for('tasks.complete_task', task_id=task.id) }}">
+          <input type="hidden" name="next" value="{{ request.full_path }}">
+          <button type="submit" class="btn btn-outline-success btn-sm">✓ Выполнить</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7" class="text-center text-muted py-4">Задач сетевого графика на этот месяц нет</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}
