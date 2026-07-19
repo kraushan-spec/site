@@ -1,6 +1,9 @@
 import os
 
+from dotenv import load_dotenv
+
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+load_dotenv(os.path.join(BASE_DIR, ".env"))
 
 
 class Config:
@@ -16,3 +19,4 @@ class Config:
         "doc", "docx", "xls", "xlsx", "ppt", "pptx", "pdf",
         "jpg", "jpeg", "png", "gif", "txt", "csv", "zip", "rar",
     }
+    TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")

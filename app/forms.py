@@ -54,3 +54,17 @@ class UserForm(FlaskForm):
 class DepartmentForm(FlaskForm):
     name = StringField("Название подразделения", validators=[DataRequired(), Length(max=255)])
     submit_btn = SubmitField("Сохранить")
+
+
+MONTH_LABELS = [
+    (1, "Январь"), (2, "Февраль"), (3, "Март"), (4, "Апрель"),
+    (5, "Май"), (6, "Июнь"), (7, "Июль"), (8, "Август"),
+    (9, "Сентябрь"), (10, "Октябрь"), (11, "Ноябрь"), (12, "Декабрь"),
+]
+
+
+class ImportScheduleForm(FlaskForm):
+    file = FileField("Файл сетевого графика (.xls/.xlsx)", validators=[DataRequired()])
+    year = SelectField("Год", coerce=int)
+    month = SelectField("Месяц", coerce=int, choices=MONTH_LABELS)
+    submit_btn = SubmitField("Импортировать")

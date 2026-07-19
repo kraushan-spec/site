@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Импорт сетевого графика{% endblock %}
+{% block content %}
+<h3 class="mb-3">Импорт сетевого графика из Excel</h3>
+<p class="text-muted">
+  Файл разбирается по колонкам «Мероприятия» / «Подразделение — исполнитель» / «Срок исполнения».
+  Исполнитель не назначается автоматически — все созданные задачи временно достаются вам,
+  дальше их нужно вручную распределить через редактирование задачи. Исходный текст подразделения
+  и срока сохраняется в первом комментарии к каждой задаче.
+</p>
+<form method="post" enctype="multipart/form-data" class="row g-3" style="max-width: 500px;" novalidate>
+  {{ form.hidden_tag() }}
+  <div class="col-12">
+    {{ form.file.label(class="form-label") }}
+    {{ form.file(class="form-control") }}
+    {% for e in form.file.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+  </div>
+  <div class="col-md-6">
+    {{ form.month.label(class="form-label") }}
+    {{ form.month(class="form-select") }}
+  </div>
+  <div class="col-md-6">
+    {{ form.year.label(class="form-label") }}
+    {{ form.year(class="form-select") }}
+  </div>
+  <div class="col-12">
+    {{ form.submit_btn(class="btn btn-primary") }}
+  </div>
+</form>
+{% endblock %}

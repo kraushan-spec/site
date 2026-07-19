@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Результат импорта{% endblock %}
+{% block content %}
+<h3 class="mb-3">Результат импорта</h3>
+
+<div class="alert alert-success">Создано задач: {{ created_tasks|length }}</div>
+
+<table class="table table-hover mb-4">
+  <thead><tr><th>Название</th><th>Подразделение</th><th>Срок</th></tr></thead>
+  <tbody>
+    {% for task in created_tasks %}
+    <tr>
+      <td><a href="{{ url_for('tasks.view_task', task_id=task.id) }}">{{ task.title }}</a></td>
+      <td>{{ task.department.name if task.department else "не определено" }}</td>
+      <td>{{ task.deadline.strftime("%d.%m.%Y %H:%M") }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% if skipped %}
+<h5>Пропущено как заголовки разделов ({{ skipped|length }})</h5>
+<ul class="text-muted">
+  {% for title in skipped %}
+  <li>{{ title }}</li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+<a href="{{ url_for('tasks.list_tasks') }}" class="btn btn-outline-secondary">К списку задач</a>
+<a href="{{ url_for('admin.import_schedule') }}" class="btn btn-outline-secondary">Импортировать ещё раз</a>
+{% endblock %}

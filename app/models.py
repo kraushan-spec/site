@@ -90,6 +90,7 @@ class User(UserMixin, db.Model):
     role = db.Column(db.String(20), nullable=False, default=ROLE_EXECUTOR)
     department_id = db.Column(db.Integer, db.ForeignKey("departments.id"), nullable=True)
     telegram_chat_id = db.Column(db.String(64), nullable=True)
+    telegram_link_code = db.Column(db.String(16), unique=True, nullable=True)
     is_active_flag = db.Column("is_active", db.Boolean, nullable=False, default=True)
 
     department = db.relationship("Department", back_populates="users")
@@ -126,7 +127,7 @@ class Task(db.Model):
     is_done = db.Column(db.Boolean, nullable=False, default=False)
     completed_at = db.Column(db.DateTime, nullable=True)
     created_by_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.now)
 
     department = db.relationship("Department", back_populates="tasks")
     assignee = db.relationship("User", foreign_keys=[assignee_id])
@@ -145,7 +146,7 @@ class Task(db.Model):
     def status(self):
         if self.is_done:
             return STATUS_DONE
-        now = datetime.utcnow()
+        now = datetime.now()
         if self.deadline < now:
             return STATUS_OVERDUE
         if self.deadline - now <= DUE_SOON_WINDOW:
@@ -183,7 +184,7 @@ class Comment(db.Model):
     task_id = db.Column(db.Integer, db.ForeignKey("tasks.id"), nullable=False)
     author_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     body = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.now)
 
     task = db.relationship("Task", back_populates="comments")
     author = db.relationship("User")
@@ -197,7 +198,20 @@ class Attachment(db.Model):
     uploaded_by_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     filename = db.Column(db.String(500), nullable=False)
     stored_path = db.Column(db.String(500), nullable=False)
-    uploaded_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    uploaded_at = db.Column(db.DateTime, nullable=False, default=datetime.now)
 
     task = db.relationship("Task", back_populates="attachments")
     uploaded_by = db.relationship("User")
+
+
+class NotificationLog(db.Model):
+    __tablename__ = "notification_logs"
+    __table_args__ = (
+        db.UniqueConstraint("task_id", "recipient_id", "kind", name="uq_notification_once"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    task_id = db.Column(db.Integer, db.ForeignKey("tasks.id"), nullable=False)
+    recipient_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    kind = db.Column(db.String(64), nullable=False)
+    sent_at = db.Column(db.DateTime, nullable=False, default=datetime.now)

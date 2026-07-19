@@ -6,6 +6,7 @@
   <title>{% block title %}Контроль поручений{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap/css/bootstrap.min.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  {% block head %}{% endblock %}
 </head>
 <body>
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-3">
@@ -25,10 +26,11 @@
         {% if current_user.role == 'admin' %}
         <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.users') }}">Пользователи</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.departments') }}">Подразделения</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.import_schedule') }}">Импорт графика</a></li>
         {% endif %}
       </ul>
-      <span class="navbar-text me-3">{{ current_user.full_name }} ({{ ROLE_LABELS[current_user.role] }})</span>
-      <a class="btn btn-outline-light btn-sm" href="{{ url_for('auth.logout') }}">Выйти</a>
+      <a class="nav-link d-inline" href="{{ url_for('profile.view_profile') }}">{{ current_user.full_name }} ({{ ROLE_LABELS[current_user.role] }}){% if not current_user.telegram_chat_id %} <span class="badge bg-warning text-dark">Telegram не привязан</span>{% endif %}</a>
+      <a class="btn btn-outline-light btn-sm ms-2" href="{{ url_for('auth.logout') }}">Выйти</a>
       {% endif %}
     </div>
   </div>

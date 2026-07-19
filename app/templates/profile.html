@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Профиль{% endblock %}
+{% block head %}
+{% if current_user.telegram_link_code and not current_user.telegram_chat_id %}
+<meta http-equiv="refresh" content="5">
+{% endif %}
+{% endblock %}
+{% block content %}
+<h3 class="mb-3">Профиль</h3>
+<div class="card" style="max-width: 500px;">
+  <div class="card-body">
+    <p><strong>ФИО:</strong> {{ current_user.full_name }}</p>
+    <p><strong>Роль:</strong> {{ current_user.role_label }}</p>
+    <p><strong>Подразделение:</strong> {{ current_user.department.name if current_user.department else "—" }}</p>
+    <hr>
+    <h6>Telegram-уведомления о сроках задач</h6>
+    {% if current_user.telegram_chat_id %}
+      <p class="text-success">✅ Telegram привязан</p>
+      <form method="post" action="{{ url_for('profile.unlink_telegram') }}">
+        <button type="submit" class="btn btn-outline-danger btn-sm">Отвязать</button>
+      </form>
+    {% else %}
+      {% if current_user.telegram_link_code %}
+        <p>Отправьте боту {% if bot_username %}<a href="https://t.me/{{ bot_username }}" target="_blank">@{{ bot_username }}</a>{% else %}(имя бота уточните у администратора){% endif %} команду:</p>
+        <p><code>/start {{ current_user.telegram_link_code }}</code></p>
+        <p class="text-muted small">После этого страница обновится автоматически, как только бот подтвердит привязку.</p>
+      {% else %}
+        <p class="text-muted">Telegram не привязан — уведомления о приближающихся и просроченных сроках приходить не будут.</p>
+      {% endif %}
+      <form method="post" action="{{ url_for('profile.link_telegram') }}">
+        <button type="submit" class="btn btn-primary btn-sm">{{ "Сгенерировать новый код" if current_user.telegram_link_code else "Привязать Telegram" }}</button>
+      </form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
