@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Пользователи{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3 class="mb-0">Пользователи</h3>
+  <a href="{{ url_for('admin.new_user') }}" class="btn btn-primary">+ Новый пользователь</a>
+</div>
+<table class="table table-hover">
+  <thead>
+    <tr><th>ФИО</th><th>Логин</th><th>Роль</th><th>Подразделение</th><th>Активен</th><th></th></tr>
+  </thead>
+  <tbody>
+    {% for u in users %}
+    <tr>
+      <td>{{ u.full_name }}</td>
+      <td>{{ u.login }}</td>
+      <td>{{ u.role_label }}</td>
+      <td>{{ u.department.name if u.department else "—" }}</td>
+      <td>{{ "Да" if u.is_active_flag else "Нет" }}</td>
+      <td><a href="{{ url_for('admin.edit_user', user_id=u.id) }}" class="btn btn-sm btn-outline-primary">Изменить</a></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

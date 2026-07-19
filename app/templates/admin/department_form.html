@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}{{ "Редактирование подразделения" if department else "Новое подразделение" }}{% endblock %}
+{% block content %}
+<h3 class="mb-3">{{ "Редактирование подразделения" if department else "Новое подразделение" }}</h3>
+<form method="post" class="row g-3" style="max-width: 500px;" novalidate>
+  {{ form.hidden_tag() }}
+  <div class="col-12">
+    {{ form.name.label(class="form-label") }}
+    {{ form.name(class="form-control") }}
+    {% for e in form.name.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+  </div>
+  <div class="col-12">
+    {{ form.submit_btn(class="btn btn-primary") }}
+    <a href="{{ url_for('admin.departments') }}" class="btn btn-outline-secondary">Отмена</a>
+  </div>
+</form>
+{% endblock %}
