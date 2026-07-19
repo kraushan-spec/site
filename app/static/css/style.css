@@ -1,0 +1,55 @@
+body {
+  background-color: #f5f6f8;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.status-dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: #adb5bd;
+}
+.status-dot.status-danger { background-color: #dc3545; }
+.status-dot.status-warning { background-color: #ffc107; }
+.status-dot.status-success { background-color: #198754; }
+.status-dot.status-secondary { background-color: #adb5bd; }
+
+.calendar-table th, .calendar-table td {
+  width: 14.28%;
+  height: 110px;
+  vertical-align: top;
+  padding: 4px;
+}
+
+.calendar-empty {
+  background-color: #f0f0f0;
+}
+
+.calendar-today {
+  background-color: #eaf4ff;
+}
+
+.calendar-day-number {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.calendar-task-badge {
+  display: block;
+  font-size: 0.72rem;
+  color: #fff;
+  border-radius: 4px;
+  padding: 1px 4px;
+  margin-bottom: 2px;
+  text-decoration: none;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.calendar-task-badge:hover {
+  opacity: 0.85;
+  color: #fff;
+}

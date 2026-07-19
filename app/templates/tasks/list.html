@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Список задач{% endblock %}
+{% block content %}
+<h3 class="mb-3">Список задач</h3>
+
+<form method="get" class="row g-2 mb-3 align-items-end">
+  {% if departments %}
+  <div class="col-auto">
+    <label class="form-label">Подразделение</label>
+    <select name="department_id" class="form-select" onchange="this.form.submit()">
+      <option value="">Все</option>
+      {% for d in departments %}
+      <option value="{{ d.id }}" {% if filters.department_id == d.id %}selected{% endif %}>{{ d.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  {% endif %}
+  <div class="col-auto">
+    <label class="form-label">Исполнитель</label>
+    <select name="assignee_id" class="form-select" onchange="this.form.submit()">
+      <option value="">Все</option>
+      {% for u in users %}
+      <option value="{{ u.id }}" {% if filters.assignee_id == u.id %}selected{% endif %}>{{ u.full_name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <label class="form-label">Тип задачи</label>
+    <select name="task_type" class="form-select" onchange="this.form.submit()">
+      <option value="">Все</option>
+      {% for key, label in task_types.items() %}
+      <option value="{{ key }}" {% if filters.task_type == key %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <label class="form-label">Важность</label>
+    <select name="importance" class="form-select" onchange="this.form.submit()">
+      <option value="">Все</option>
+      {% for key, label in IMPORTANCE_LABELS.items() %}
+      <option value="{{ key }}" {% if filters.importance == key %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <label class="form-label">Статус</label>
+    <select name="status" class="form-select" onchange="this.form.submit()">
+      <option value="">Все</option>
+      {% for key, label in statuses.items() %}
+      <option value="{{ key }}" {% if filters.status == key %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <a href="{{ url_for('tasks.list_tasks') }}" class="btn btn-outline-secondary">Сбросить</a>
+  </div>
+</form>
+
+<div class="table-responsive">
+<table class="table table-hover align-middle">
+  <thead>
+    <tr>
+      <th></th>
+      <th>Название</th>
+      <th>Тип</th>
+      <th>Подразделение</th>
+      <th>Исполнитель</th>
+      <th>Срок</th>
+      <th>Важность</th>
+      <th>Статус</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for task in tasks %}
+    <tr class="cursor-pointer" onclick="window.location='{{ url_for('tasks.view_task', task_id=task.id) }}'">
+      <td><span class="status-dot status-{{ task.status_color }}"></span></td>
+      <td>{{ task.title }}</td>
+      <td><span class="badge bg-{{ task.task_type_color }}">{{ task.task_type_label }}</span></td>
+      <td>{{ task.department.name }}</td>
+      <td>{{ task.assignee.full_name }}</td>
+      <td>{{ task.deadline.strftime("%d.%m.%Y %H:%M") }}</td>
+      <td>{{ task.importance_label }}</td>
+      <td><span class="badge bg-{{ task.status_color }}">{{ task.status_label }}</span></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="8" class="text-center text-muted py-4">Задач нет</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

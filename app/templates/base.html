@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Контроль поручений{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap/css/bootstrap.min.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-3">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="{{ url_for('tasks.list_tasks') }}">Контроль поручений</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="nav">
+      {% if current_user.is_authenticated %}
+      <ul class="navbar-nav me-auto">
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('tasks.list_tasks') }}">Список задач</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('tasks.calendar_view') }}">Календарь</a></li>
+        {% if current_user.role in ('admin', 'manager') %}
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('tasks.new_task') }}">+ Новая задача</a></li>
+        {% endif %}
+        {% if current_user.role == 'admin' %}
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.users') }}">Пользователи</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.departments') }}">Подразделения</a></li>
+        {% endif %}
+      </ul>
+      <span class="navbar-text me-3">{{ current_user.full_name }} ({{ ROLE_LABELS[current_user.role] }})</span>
+      <a class="btn btn-outline-light btn-sm" href="{{ url_for('auth.logout') }}">Выйти</a>
+      {% endif %}
+    </div>
+  </div>
+</nav>
+
+<div class="container-fluid px-4">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  {% block content %}{% endblock %}
+</div>
+
+<script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+</body>
+</html>

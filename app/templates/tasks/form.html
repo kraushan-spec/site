@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}{{ "Редактирование задачи" if task else "Новая задача" }}{% endblock %}
+{% block content %}
+<h3 class="mb-3">{{ "Редактирование задачи" if task else "Новая задача" }}</h3>
+<form method="post" class="row g-3" style="max-width: 700px;" novalidate>
+  {{ form.hidden_tag() }}
+  <div class="col-12">
+    {{ form.title.label(class="form-label") }}
+    {{ form.title(class="form-control") }}
+  </div>
+  <div class="col-md-6">
+    {{ form.task_type.label(class="form-label") }}
+    {{ form.task_type(class="form-select") }}
+  </div>
+  <div class="col-md-6">
+    {{ form.department_id.label(class="form-label") }}
+    {{ form.department_id(class="form-select") }}
+  </div>
+  <div class="col-md-6">
+    {{ form.assignee_id.label(class="form-label") }}
+    {{ form.assignee_id(class="form-select") }}
+  </div>
+  <div class="col-md-6">
+    {{ form.backup_assignee_id.label(class="form-label") }}
+    {{ form.backup_assignee_id(class="form-select") }}
+  </div>
+  <div class="col-md-6">
+    {{ form.deadline.label(class="form-label") }}
+    {{ form.deadline(class="form-control", type="datetime-local") }}
+  </div>
+  <div class="col-md-6">
+    {{ form.importance.label(class="form-label") }}
+    {{ form.importance(class="form-select") }}
+  </div>
+  <div class="col-12">
+    {{ form.submit_btn(class="btn btn-primary") }}
+    <a href="{{ url_for('tasks.list_tasks') }}" class="btn btn-outline-secondary">Отмена</a>
+  </div>
+</form>
+{% endblock %}

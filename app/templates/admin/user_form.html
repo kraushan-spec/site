@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}{{ "Редактирование пользователя" if user else "Новый пользователь" }}{% endblock %}
+{% block content %}
+<h3 class="mb-3">{{ "Редактирование пользователя" if user else "Новый пользователь" }}</h3>
+<form method="post" class="row g-3" style="max-width: 600px;" novalidate>
+  {{ form.hidden_tag() }}
+  <div class="col-12">
+    {{ form.full_name.label(class="form-label") }}
+    {{ form.full_name(class="form-control") }}
+  </div>
+  <div class="col-md-6">
+    {{ form.login.label(class="form-label") }}
+    {{ form.login(class="form-control") }}
+    {% for e in form.login.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+  </div>
+  <div class="col-md-6">
+    {{ form.password.label(class="form-label") }}
+    {{ form.password(class="form-control") }}
+    <div class="form-text">{{ "Оставьте пустым, чтобы не менять" if user else "Обязателен для нового пользователя" }}</div>
+    {% for e in form.password.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+  </div>
+  <div class="col-md-6">
+    {{ form.role.label(class="form-label") }}
+    {{ form.role(class="form-select") }}
+  </div>
+  <div class="col-md-6">
+    {{ form.department_id.label(class="form-label") }}
+    {{ form.department_id(class="form-select") }}
+  </div>
+  <div class="col-12 form-check">
+    {{ form.is_active_flag(class="form-check-input") }}
+    {{ form.is_active_flag.label(class="form-check-label") }}
+  </div>
+  <div class="col-12">
+    {{ form.submit_btn(class="btn btn-primary") }}
+    <a href="{{ url_for('admin.users') }}" class="btn btn-outline-secondary">Отмена</a>
+  </div>
+</form>
+{% endblock %}
