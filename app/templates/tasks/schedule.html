@@ -34,7 +34,7 @@
         {% for task in tasks_by_day.get(day, []) %}
         <div class="d-flex align-items-center gap-1 mb-1">
           <a href="{{ url_for('tasks.view_task', task_id=task.id) }}" class="calendar-task-badge bg-{{ task.status_color }} flex-grow-1" title="{{ task.title }}">
-            {{ task.title[:18] }}{% if task.title|length > 18 %}…{% endif %}
+            {% if task.is_done %}✓ {% endif %}{{ task.title[:18] }}{% if task.title|length > 18 %}…{% endif %}
           </a>
           {% if task.id in completable_ids %}
           <form method="post" action="{{ url_for('tasks.complete_task', task_id=task.id) }}">
