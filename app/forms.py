@@ -1,8 +1,8 @@
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField
 from wtforms import (
-    BooleanField, DateTimeField, PasswordField, SelectField, StringField,
-    SubmitField, TextAreaField,
+    BooleanField, DateField, DateTimeField, PasswordField, SelectField,
+    StringField, SubmitField, TextAreaField,
 )
 from wtforms.validators import DataRequired, Length, Optional
 
@@ -68,3 +68,10 @@ class ImportScheduleForm(FlaskForm):
     year = SelectField("Год", coerce=int)
     month = SelectField("Месяц", coerce=int, choices=MONTH_LABELS)
     submit_btn = SubmitField("Импортировать")
+
+
+class ReportForm(FlaskForm):
+    date_from = DateField("С", validators=[DataRequired()])
+    date_to = DateField("По", validators=[DataRequired()])
+    format = SelectField("Формат", choices=[("xlsx", "Excel (.xlsx)"), ("csv", "CSV")])
+    submit_btn = SubmitField("Скачать отчёт")

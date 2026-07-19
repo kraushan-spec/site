@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Архив{% endblock %}
+{% block content %}
+<h3 class="mb-3">Архив выполненных задач</h3>
+
+<form method="get" class="row g-2 mb-3 align-items-end">
+  {% if departments %}
+  <div class="col-auto">
+    <label class="form-label">Подразделение</label>
+    <select name="department_id" class="form-select" onchange="this.form.submit()">
+      <option value="">Все</option>
+      {% for d in departments %}
+      <option value="{{ d.id }}" {% if filters.department_id == d.id %}selected{% endif %}>{{ d.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  {% endif %}
+  <div class="col-auto">
+    <label class="form-label">Исполнитель</label>
+    <select name="assignee_id" class="form-select" onchange="this.form.submit()">
+      <option value="">Все</option>
+      {% for u in users %}
+      <option value="{{ u.id }}" {% if filters.assignee_id == u.id %}selected{% endif %}>{{ u.full_name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <label class="form-label">Тип задачи</label>
+    <select name="task_type" class="form-select" onchange="this.form.submit()">
+      <option value="">Все</option>
+      {% for key, label in task_types.items() %}
+      <option value="{{ key }}" {% if filters.task_type == key %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <label class="form-label">Важность</label>
+    <select name="importance" class="form-select" onchange="this.form.submit()">
+      <option value="">Все</option>
+      {% for key, label in IMPORTANCE_LABELS.items() %}
+      <option value="{{ key }}" {% if filters.importance == key %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <label class="form-label">Завершено с</label>
+    <input type="date" name="date_from" class="form-control" value="{{ filters.date_from or '' }}" onchange="this.form.submit()">
+  </div>
+  <div class="col-auto">
+    <label class="form-label">по</label>
+    <input type="date" name="date_to" class="form-control" value="{{ filters.date_to or '' }}" onchange="this.form.submit()">
+  </div>
+  <div class="col-auto">
+    <a href="{{ url_for('tasks.archive_view') }}" class="btn btn-outline-secondary">Сбросить</a>
+  </div>
+</form>
+
+<div class="table-responsive">
+<table class="table table-hover align-middle">
+  <thead>
+    <tr>
+      <th></th>
+      <th>Название</th>
+      <th>Тип</th>
+      <th>Подразделение</th>
+      <th>Исполнитель</th>
+      <th>Срок</th>
+      <th>Завершено</th>
+      <th>Итог</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for task in tasks %}
+    <tr class="cursor-pointer" onclick="window.location='{{ url_for('tasks.view_task', task_id=task.id) }}'">
+      <td><span class="status-dot status-{{ 'danger' if task.is_late else 'success' }}"></span></td>
+      <td>{{ task.title }}</td>
+      <td><span class="badge bg-{{ task.task_type_color }}">{{ task.task_type_label }}</span></td>
+      <td>{{ task.department.name }}</td>
+      <td>{{ task.assignee.full_name }}</td>
+      <td>{{ task.deadline.strftime("%d.%m.%Y %H:%M") }}</td>
+      <td>{{ task.completed_at.strftime("%d.%m.%Y %H:%M") if task.completed_at else "—" }}</td>
+      <td>
+        {% if task.is_late %}
+        <span class="badge bg-danger">Просрочено</span>
+        {% else %}
+        <span class="badge bg-success">Вовремя</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="8" class="text-center text-muted py-4">Завершённых задач нет</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

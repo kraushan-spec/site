@@ -154,6 +154,10 @@ class Task(db.Model):
         return STATUS_IN_PROGRESS
 
     @property
+    def is_late(self):
+        return bool(self.is_done and self.completed_at and self.completed_at > self.deadline)
+
+    @property
     def status_label(self):
         return STATUS_LABELS[self.status]
 

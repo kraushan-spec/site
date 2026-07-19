@@ -27,11 +27,13 @@ def create_app(config_class=Config):
     from app.tasks import bp as tasks_bp
     from app.admin import bp as admin_bp
     from app.profile import bp as profile_bp
+    from app.reports import bp as reports_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(tasks_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(profile_bp)
+    app.register_blueprint(reports_bp)
 
     from flask import redirect, url_for
 
