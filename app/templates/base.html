@@ -20,7 +20,7 @@
       <ul class="navbar-nav me-auto">
         <li class="nav-item"><a class="nav-link" href="{{ url_for('tasks.list_tasks') }}">Список задач</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('tasks.calendar_view') }}">Календарь</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('tasks.schedule_view') }}">Сетевой график</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('tasks.schedule_list_view') }}">Сетевой график</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('tasks.archive_view') }}">Архив</a></li>
         {% if current_user.role in ('admin', 'manager') %}
         <li class="nav-item"><a class="nav-link" href="{{ url_for('tasks.new_task') }}">+ Новая задача</a></li>
