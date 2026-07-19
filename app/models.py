@@ -92,6 +92,7 @@ class User(UserMixin, db.Model):
     telegram_chat_id = db.Column(db.String(64), nullable=True)
     telegram_link_code = db.Column(db.String(16), unique=True, nullable=True)
     is_active_flag = db.Column("is_active", db.Boolean, nullable=False, default=True)
+    can_manage_schedule = db.Column(db.Boolean, nullable=False, default=False)
 
     department = db.relationship("Department", back_populates="users")
 

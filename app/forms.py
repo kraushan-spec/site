@@ -48,6 +48,7 @@ class UserForm(FlaskForm):
     role = SelectField("Роль", choices=list(ROLE_LABELS.items()))
     department_id = SelectField("Подразделение", coerce=int, validators=[Optional()])
     is_active_flag = BooleanField("Активен", default=True)
+    can_manage_schedule = BooleanField("Может управлять сетевым графиком", default=False)
     submit_btn = SubmitField("Сохранить")
 
 

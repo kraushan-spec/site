@@ -7,6 +7,15 @@
   <a class="btn btn-outline-secondary" href="{{ url_for('tasks.schedule_view', year=next_year, month=next_month) }}">След. &raquo;</a>
 </div>
 
+<div class="d-flex gap-2 mb-3">
+  <a class="btn btn-outline-primary btn-sm" href="{{ url_for('tasks.export_schedule', year=year, month=month) }}">Скачать в Excel</a>
+  {% if can_manage_schedule %}
+  <form method="post" action="{{ url_for('tasks.clone_schedule', year=year, month=month) }}" onsubmit="return confirm('Создать график на следующий месяц на основе текущего?');">
+    <button type="submit" class="btn btn-outline-success btn-sm">Создать график на следующий месяц</button>
+  </form>
+  {% endif %}
+</div>
+
 <table class="table table-bordered calendar-table">
   <thead>
     <tr>
