@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Сетевой график{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <a class="btn btn-outline-secondary" href="{{ url_for('tasks.schedule_view', year=prev_year, month=prev_month) }}">&laquo; Пред.</a>
+  <h3 class="mb-0">Сетевой график — {{ month_name }} {{ year }}</h3>
+  <a class="btn btn-outline-secondary" href="{{ url_for('tasks.schedule_view', year=next_year, month=next_month) }}">След. &raquo;</a>
+</div>
+
+<table class="table table-bordered calendar-table">
+  <thead>
+    <tr>
+      <th>Пн</th><th>Вт</th><th>Ср</th><th>Чт</th><th>Пт</th><th>Сб</th><th>Вс</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for week in weeks %}
+    <tr>
+      {% for day in week %}
+      {% if day == 0 %}
+      <td class="calendar-empty"></td>
+      {% else %}
+      <td class="{% if today.year == year and today.month == month and today.day == day %}calendar-today{% endif %}">
+        <div class="calendar-day-number">{{ day }}</div>
+        {% for task in tasks_by_day.get(day, []) %}
+        <div class="d-flex align-items-center gap-1 mb-1">
+          <a href="{{ url_for('tasks.view_task', task_id=task.id) }}" class="calendar-task-badge bg-{{ task.status_color }} flex-grow-1" title="{{ task.title }}">
+            {{ task.title[:18] }}{% if task.title|length > 18 %}…{% endif %}
+          </a>
+          {% if task.id in completable_ids %}
+          <form method="post" action="{{ url_for('tasks.complete_task', task_id=task.id) }}">
+            <input type="hidden" name="next" value="{{ request.full_path }}">
+            <button type="submit" class="btn btn-success py-0 px-1" style="font-size: 0.65rem; line-height: 1.4;" title="Отметить выполненным">✓</button>
+          </form>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </td>
+      {% endif %}
+      {% endfor %}
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<div class="mt-2">
+  <span class="status-dot status-danger"></span> Просрочено
+  <span class="status-dot status-warning ms-3"></span> Срок приближается
+  <span class="status-dot status-success ms-3"></span> Выполнено
+  <span class="status-dot status-secondary ms-3"></span> В работе
+  <span class="ms-3">✓ — отметить выполненным прямо здесь</span>
+</div>
+{% endblock %}

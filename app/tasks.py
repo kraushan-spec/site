@@ -1,7 +1,7 @@
 import calendar as calendar_module
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, time
 
 from flask import (
     Blueprint, abort, current_app, flash, redirect, render_template,
@@ -14,7 +14,7 @@ from app.extensions import db
 from app.forms import AttachmentForm, CommentForm, TaskForm
 from app.models import (
     Attachment, Comment, Department, ROLE_ADMIN, ROLE_EXECUTOR, ROLE_MANAGER,
-    STATUS_LABELS, TASK_TYPE_LABELS, Task, User,
+    STATUS_LABELS, TASK_TYPE_LABELS, TASK_TYPE_NETWORK_SCHEDULE, Task, User,
 )
 from app.notifications import get_status_change_recipients, notify_event
 
@@ -69,6 +69,13 @@ def can_complete_task(task):
     return current_user.id in (task.assignee_id, task.backup_assignee_id)
 
 
+def _parse_date(value):
+    try:
+        return datetime.strptime(value, "%Y-%m-%d").date()
+    except (ValueError, TypeError):
+        return None
+
+
 def _department_choices():
     return [(d.id, d.name) for d in Department.query.order_by(Department.name).all()]
 
@@ -83,7 +90,7 @@ def _user_choices(department_id=None):
 @bp.route("")
 @login_required
 def list_tasks():
-    query = visible_tasks_query()
+    query = visible_tasks_query().filter(Task.task_type != TASK_TYPE_NETWORK_SCHEDULE)
 
     department_id = request.args.get("department_id", type=int)
     assignee_id = request.args.get("assignee_id", type=int)
@@ -115,7 +122,7 @@ def list_tasks():
         tasks=tasks,
         departments=departments,
         users=visible_users_for_filter(),
-        task_types=TASK_TYPE_LABELS,
+        task_types={k: v for k, v in TASK_TYPE_LABELS.items() if k != TASK_TYPE_NETWORK_SCHEDULE},
         statuses=STATUS_LABELS,
         filters={
             "department_id": department_id,
@@ -123,6 +130,60 @@ def list_tasks():
             "importance": importance,
             "task_type": task_type,
             "status": status,
+        },
+    )
+
+
+@bp.route("/archive")
+@login_required
+def archive_view():
+    query = visible_tasks_query().filter(Task.is_done.is_(True))
+
+    department_id = request.args.get("department_id", type=int)
+    assignee_id = request.args.get("assignee_id", type=int)
+    task_type = request.args.get("task_type")
+    importance = request.args.get("importance")
+    date_from = request.args.get("date_from")
+    date_to = request.args.get("date_to")
+
+    if department_id:
+        query = query.filter(Task.department_id == department_id)
+    if assignee_id:
+        query = query.filter(Task.assignee_id == assignee_id)
+    if task_type:
+        query = query.filter(Task.task_type == task_type)
+    if importance:
+        query = query.filter(Task.importance == importance)
+    if date_from:
+        parsed = _parse_date(date_from)
+        if parsed:
+            query = query.filter(Task.completed_at >= datetime.combine(parsed, time.min))
+    if date_to:
+        parsed = _parse_date(date_to)
+        if parsed:
+            query = query.filter(Task.completed_at <= datetime.combine(parsed, time.max))
+
+    tasks = query.order_by(Task.completed_at.desc()).all()
+
+    departments = (
+        Department.query.order_by(Department.name).all()
+        if current_user.role == ROLE_ADMIN
+        else []
+    )
+
+    return render_template(
+        "tasks/archive.html",
+        tasks=tasks,
+        departments=departments,
+        users=visible_users_for_filter(),
+        task_types=TASK_TYPE_LABELS,
+        filters={
+            "department_id": department_id,
+            "assignee_id": assignee_id,
+            "task_type": task_type,
+            "importance": importance,
+            "date_from": date_from,
+            "date_to": date_to,
         },
     )
 
@@ -138,7 +199,7 @@ def calendar_view():
     elif month > 12:
         month, year = 1, year + 1
 
-    tasks = visible_tasks_query().all()
+    tasks = visible_tasks_query().filter(Task.task_type != TASK_TYPE_NETWORK_SCHEDULE).all()
     tasks_by_day = {}
     for t in tasks:
         if t.deadline.year == year and t.deadline.month == month:
@@ -154,6 +215,47 @@ def calendar_view():
         "tasks/calendar.html",
         weeks=weeks,
         tasks_by_day=tasks_by_day,
+        year=year,
+        month=month,
+        month_name=RU_MONTH_NAMES[month],
+        prev_month=prev_month,
+        prev_year=prev_year,
+        next_month=next_month,
+        next_year=next_year,
+        today=today.date(),
+    )
+
+
+@bp.route("/schedule")
+@login_required
+def schedule_view():
+    today = datetime.now()
+    year = request.args.get("year", type=int, default=today.year)
+    month = request.args.get("month", type=int, default=today.month)
+    if month < 1:
+        month, year = 12, year - 1
+    elif month > 12:
+        month, year = 1, year + 1
+
+    tasks = visible_tasks_query().filter(Task.task_type == TASK_TYPE_NETWORK_SCHEDULE).all()
+    tasks_by_day = {}
+    for t in tasks:
+        if t.deadline.year == year and t.deadline.month == month:
+            tasks_by_day.setdefault(t.deadline.day, []).append(t)
+
+    completable_ids = {t.id for t in tasks if not t.is_done and can_complete_task(t)}
+
+    cal = calendar_module.Calendar(firstweekday=0)
+    weeks = cal.monthdayscalendar(year, month)
+
+    prev_month, prev_year = (12, year - 1) if month == 1 else (month - 1, year)
+    next_month, next_year = (1, year + 1) if month == 12 else (month + 1, year)
+
+    return render_template(
+        "tasks/schedule.html",
+        weeks=weeks,
+        tasks_by_day=tasks_by_day,
+        completable_ids=completable_ids,
         year=year,
         month=month,
         month_name=RU_MONTH_NAMES[month],
@@ -278,6 +380,10 @@ def complete_task(task_id):
         recipients=get_status_change_recipients(task),
     )
     flash("Задача отмечена как выполненная", "success")
+
+    next_url = request.form.get("next")
+    if next_url and next_url.startswith("/") and not next_url.startswith("//"):
+        return redirect(next_url)
     return redirect(url_for("tasks.view_task", task_id=task.id))
 
 
