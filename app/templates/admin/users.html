@@ -7,7 +7,7 @@
 </div>
 <table class="table table-hover">
   <thead>
-    <tr><th>ФИО</th><th>Логин</th><th>Роль</th><th>Подразделение</th><th>Активен</th><th></th></tr>
+    <tr><th>ФИО</th><th>Логин</th><th>Роль</th><th>Подразделение</th><th>Активен</th><th>Telegram</th><th></th></tr>
   </thead>
   <tbody>
     {% for u in users %}
@@ -17,6 +17,7 @@
       <td>{{ u.role_label }}</td>
       <td>{{ u.department.name if u.department else "—" }}</td>
       <td>{{ "Да" if u.is_active_flag else "Нет" }}</td>
+      <td>{{ "✅" if u.telegram_chat_id else "—" }}</td>
       <td><a href="{{ url_for('admin.edit_user', user_id=u.id) }}" class="btn btn-sm btn-outline-primary">Изменить</a></td>
     </tr>
     {% endfor %}

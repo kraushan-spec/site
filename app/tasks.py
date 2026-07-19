@@ -16,6 +16,7 @@ from app.models import (
     Attachment, Comment, Department, ROLE_ADMIN, ROLE_EXECUTOR, ROLE_MANAGER,
     STATUS_LABELS, TASK_TYPE_LABELS, Task, User,
 )
+from app.notifications import get_status_change_recipients, notify_event
 
 bp = Blueprint("tasks", __name__, url_prefix="/tasks")
 
@@ -129,7 +130,7 @@ def list_tasks():
 @bp.route("/calendar")
 @login_required
 def calendar_view():
-    today = datetime.utcnow()
+    today = datetime.now()
     year = request.args.get("year", type=int, default=today.year)
     month = request.args.get("month", type=int, default=today.month)
     if month < 1:
@@ -197,6 +198,12 @@ def new_task():
         )
         db.session.add(task)
         db.session.commit()
+        notify_event(
+            task,
+            f"🆕 Новая задача: «{task.title}» — исполнитель {task.assignee.full_name}, "
+            f"срок {task.deadline:%d.%m.%Y %H:%M}, создал: {current_user.full_name}",
+            "created",
+        )
         flash("Задача создана", "success")
         return redirect(url_for("tasks.view_task", task_id=task.id))
 
@@ -262,8 +269,14 @@ def complete_task(task_id):
     if not can_complete_task(task):
         abort(403)
     task.is_done = True
-    task.completed_at = datetime.utcnow()
+    task.completed_at = datetime.now()
     db.session.commit()
+    notify_event(
+        task,
+        f"✅ Задача выполнена: «{task.title}» (отметил: {current_user.full_name})",
+        "completed",
+        recipients=get_status_change_recipients(task),
+    )
     flash("Задача отмечена как выполненная", "success")
     return redirect(url_for("tasks.view_task", task_id=task.id))
 

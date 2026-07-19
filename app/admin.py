@@ -1,9 +1,13 @@
+from datetime import datetime
+
 from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask_login import current_user
 
 from app.decorators import roles_required
 from app.extensions import db
-from app.forms import DepartmentForm, UserForm
-from app.models import ROLE_ADMIN, Department, User
+from app.forms import DepartmentForm, ImportScheduleForm, UserForm
+from app.models import ROLE_ADMIN, Comment, Department, Task, User
+from app.schedule_import import parse_schedule_file
 
 bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -112,3 +116,53 @@ def edit_department(department_id):
             flash("Подразделение обновлено", "success")
             return redirect(url_for("admin.departments"))
     return render_template("admin/department_form.html", form=form, department=department)
+
+
+@bp.route("/import-schedule", methods=["GET", "POST"])
+@roles_required(ROLE_ADMIN)
+def import_schedule():
+    form = ImportScheduleForm()
+    current_year = datetime.now().year
+    form.year.choices = [(y, str(y)) for y in range(current_year - 1, current_year + 2)]
+    if request.method == "GET":
+        form.year.data = current_year
+        form.month.data = datetime.now().month
+
+    if form.validate_on_submit():
+        try:
+            rows, skipped = parse_schedule_file(form.file.data, form.year.data, form.month.data)
+        except ValueError as exc:
+            flash(str(exc), "danger")
+            return render_template("admin/import_schedule.html", form=form)
+
+        created_tasks = []
+        for row in rows:
+            task = Task(
+                title=row["title"],
+                task_type="network_schedule",
+                department_id=row["department_id"],
+                assignee_id=current_user.id,
+                importance="medium",
+                deadline=row["deadline"],
+                created_by_id=current_user.id,
+            )
+            db.session.add(task)
+            db.session.flush()
+            db.session.add(Comment(
+                task_id=task.id,
+                author_id=current_user.id,
+                body=(
+                    f"Импортировано из файла. Подразделение/исполнитель (как в файле): "
+                    f"{row['raw_dept_text'] or '—'}. Срок (как в файле): {row['raw_deadline_text'] or '—'}."
+                ),
+            ))
+            created_tasks.append(task)
+
+        db.session.commit()
+        return render_template(
+            "admin/import_schedule_result.html",
+            created_tasks=created_tasks,
+            skipped=skipped,
+        )
+
+    return render_template("admin/import_schedule.html", form=form)
