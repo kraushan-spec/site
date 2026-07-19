@@ -39,6 +39,7 @@ def new_user():
                 role=form.role.data,
                 department_id=form.department_id.data or None,
                 is_active_flag=form.is_active_flag.data,
+                can_manage_schedule=form.can_manage_schedule.data,
             )
             user.set_password(form.password.data)
             db.session.add(user)
@@ -70,6 +71,7 @@ def edit_user(user_id):
             user.role = form.role.data
             user.department_id = form.department_id.data or None
             user.is_active_flag = form.is_active_flag.data
+            user.can_manage_schedule = form.can_manage_schedule.data
             if form.password.data:
                 user.set_password(form.password.data)
             db.session.commit()

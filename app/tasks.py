@@ -1,11 +1,13 @@
 import calendar as calendar_module
+import io
 import os
 import uuid
 from datetime import datetime, time
 
+import pandas as pd
 from flask import (
     Blueprint, abort, current_app, flash, redirect, render_template,
-    request, send_from_directory, url_for,
+    request, send_file, send_from_directory, url_for,
 )
 from flask_login import current_user, login_required
 from werkzeug.utils import secure_filename
@@ -63,10 +65,23 @@ def can_manage_task(task):
     return False
 
 
+def user_can_manage_schedule(user):
+    return user.role == ROLE_ADMIN or bool(user.can_manage_schedule)
+
+
 def can_complete_task(task):
+    if task.task_type == TASK_TYPE_NETWORK_SCHEDULE:
+        return user_can_manage_schedule(current_user)
     if can_manage_task(task):
         return True
     return current_user.id in (task.assignee_id, task.backup_assignee_id)
+
+
+def can_reassign_task(task):
+    if task.task_type == TASK_TYPE_NETWORK_SCHEDULE:
+        return user_can_manage_schedule(current_user)
+    is_owner_executor = current_user.role == ROLE_EXECUTOR and current_user.id == task.assignee_id
+    return is_owner_executor or can_manage_task(task)
 
 
 def _parse_date(value):
@@ -264,6 +279,97 @@ def schedule_view():
         next_month=next_month,
         next_year=next_year,
         today=today.date(),
+        can_manage_schedule=user_can_manage_schedule(current_user),
+    )
+
+
+@bp.route("/schedule/clone", methods=["POST"])
+@login_required
+def clone_schedule():
+    if not user_can_manage_schedule(current_user):
+        abort(403)
+
+    year = request.args.get("year", type=int)
+    month = request.args.get("month", type=int)
+    if not year or not month:
+        abort(400)
+
+    target_month, target_year = (1, year + 1) if month == 12 else (month + 1, year)
+
+    scheduled = visible_tasks_query().filter(Task.task_type == TASK_TYPE_NETWORK_SCHEDULE).all()
+    source_tasks = [t for t in scheduled if t.deadline.year == year and t.deadline.month == month]
+    existing_keys = {
+        (t.title, t.department_id)
+        for t in scheduled
+        if t.deadline.year == target_year and t.deadline.month == target_month
+    }
+
+    last_day = calendar_module.monthrange(target_year, target_month)[1]
+
+    created = 0
+    skipped = 0
+    for t in source_tasks:
+        key = (t.title, t.department_id)
+        if key in existing_keys:
+            skipped += 1
+            continue
+        day = min(t.deadline.day, last_day)
+        new_deadline = t.deadline.replace(year=target_year, month=target_month, day=day)
+        db.session.add(Task(
+            title=t.title,
+            task_type=TASK_TYPE_NETWORK_SCHEDULE,
+            department_id=t.department_id,
+            assignee_id=t.assignee_id,
+            backup_assignee_id=t.backup_assignee_id,
+            importance=t.importance,
+            deadline=new_deadline,
+            created_by_id=current_user.id,
+        ))
+        existing_keys.add(key)
+        created += 1
+
+    db.session.commit()
+    flash(f"Создано задач: {created}, пропущено как дубли: {skipped}", "success")
+    return redirect(url_for("tasks.schedule_view", year=target_year, month=target_month))
+
+
+@bp.route("/schedule/export")
+@login_required
+def export_schedule():
+    today = datetime.now()
+    year = request.args.get("year", type=int, default=today.year)
+    month = request.args.get("month", type=int, default=today.month)
+
+    scheduled = visible_tasks_query().filter(Task.task_type == TASK_TYPE_NETWORK_SCHEDULE).all()
+    tasks = sorted(
+        (t for t in scheduled if t.deadline.year == year and t.deadline.month == month),
+        key=lambda t: t.deadline,
+    )
+
+    rows = [
+        {
+            "№": i,
+            "Мероприятия": t.title,
+            "Подразделение — исполнитель": (
+                f"{t.department.name if t.department else '—'} "
+                f"(Исп. {t.assignee.full_name if t.assignee else '—'})"
+            ),
+            "Срок исполнения": t.deadline.strftime("%d.%m.%Y"),
+        }
+        for i, t in enumerate(tasks, start=1)
+    ]
+    df = pd.DataFrame(rows, columns=["№", "Мероприятия", "Подразделение — исполнитель", "Срок исполнения"])
+
+    buffer = io.BytesIO()
+    with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+        df.to_excel(writer, sheet_name=RU_MONTH_NAMES[month], index=False)
+    buffer.seek(0)
+
+    return send_file(
+        buffer,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        as_attachment=True,
+        download_name=f"setevoy_grafik_{year}_{month:02d}.xlsx",
     )
 
 
@@ -275,6 +381,7 @@ def new_task():
 
     form = TaskForm()
     is_admin = current_user.role == ROLE_ADMIN
+    can_schedule = user_can_manage_schedule(current_user)
     form.department_id.choices = (
         _department_choices()
         if is_admin
@@ -283,11 +390,17 @@ def new_task():
     dept_for_users = None if is_admin else current_user.department_id
     form.assignee_id.choices = _user_choices(dept_for_users)
     form.backup_assignee_id.choices = [(0, "—")] + _user_choices(dept_for_users)
+    if not can_schedule:
+        form.task_type.choices = [
+            (k, v) for k, v in TASK_TYPE_LABELS.items() if k != TASK_TYPE_NETWORK_SCHEDULE
+        ]
 
     if not is_admin:
         form.department_id.data = current_user.department_id
 
     if form.validate_on_submit():
+        if form.task_type.data == TASK_TYPE_NETWORK_SCHEDULE and not can_schedule:
+            abort(403)
         task = Task(
             title=form.title.data.strip(),
             task_type=form.task_type.data,
@@ -325,7 +438,7 @@ def view_task(task_id):
         attachment_form=AttachmentForm(),
         can_manage=can_manage_task(task),
         can_complete=can_complete_task(task),
-        can_reassign=(current_user.role == ROLE_EXECUTOR and current_user.id == task.assignee_id),
+        can_reassign=can_reassign_task(task),
     )
 
 
@@ -391,8 +504,7 @@ def complete_task(task_id):
 @login_required
 def reassign_task(task_id):
     task = Task.query.get_or_404(task_id)
-    is_owner_executor = current_user.role == ROLE_EXECUTOR and current_user.id == task.assignee_id
-    if not (is_owner_executor or can_manage_task(task)):
+    if not can_reassign_task(task):
         abort(403)
 
     new_assignee_id = request.form.get("new_assignee_id", type=int)

@@ -31,6 +31,11 @@
     {{ form.is_active_flag(class="form-check-input") }}
     {{ form.is_active_flag.label(class="form-check-label") }}
   </div>
+  <div class="col-12 form-check">
+    {{ form.can_manage_schedule(class="form-check-input") }}
+    {{ form.can_manage_schedule.label(class="form-check-label") }}
+    <div class="form-text">Даёт право создавать/отмечать выполненными/передавать задачи «Сетевого графика» — обычно только у админов.</div>
+  </div>
   <div class="col-12">
     {{ form.submit_btn(class="btn btn-primary") }}
     <a href="{{ url_for('admin.users') }}" class="btn btn-outline-secondary">Отмена</a>
