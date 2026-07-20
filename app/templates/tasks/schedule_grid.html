@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Сетевой график{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <a class="btn btn-outline-secondary" href="{{ url_for('tasks.schedule_grid_view', year=prev_year, month=prev_month) }}">&laquo; Пред.</a>
+  <h3 class="mb-0">Сетевой график — {{ month_name }} {{ year }}</h3>
+  <a class="btn btn-outline-secondary" href="{{ url_for('tasks.schedule_grid_view', year=next_year, month=next_month) }}">След. &raquo;</a>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <div class="btn-group" role="group">
+    <a href="{{ url_for('tasks.schedule_grid_view', year=year, month=month) }}" class="btn btn-primary btn-sm">Таблица</a>
+    <a href="{{ url_for('tasks.schedule_list_view', year=year, month=month) }}" class="btn btn-outline-primary btn-sm">Список</a>
+    <a href="{{ url_for('tasks.schedule_view', year=year, month=month) }}" class="btn btn-outline-primary btn-sm">Календарь</a>
+  </div>
+  <div class="d-flex gap-2">
+    {% if can_manage_schedule %}
+    <a class="btn btn-success btn-sm" href="{{ url_for('tasks.new_schedule_task', year=year, month=month) }}">+ Добавить задачу(и)</a>
+    {% endif %}
+    <a class="btn btn-outline-primary btn-sm" href="{{ url_for('tasks.export_schedule', year=year, month=month) }}">Скачать в Excel</a>
+    {% if can_manage_schedule %}
+    <form method="post" action="{{ url_for('tasks.clone_schedule', year=year, month=month) }}" onsubmit="return confirm('Создать график на следующий месяц на основе текущего?');">
+      <button type="submit" class="btn btn-outline-success btn-sm">Создать график на следующий месяц</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="table-responsive">
+<table class="table table-bordered table-sm align-middle schedule-grid-table">
+  <thead>
+    <tr>
+      <th style="min-width: 220px;">Мероприятия</th>
+      <th>Подразделение</th>
+      <th>Исполнитель</th>
+      <th>Замещающий</th>
+      <th>Важность</th>
+      {% for day in days %}
+      <th class="text-center">{{ day }}</th>
+      {% endfor %}
+    </tr>
+  </thead>
+  <tbody>
+    {% for task in tasks %}
+    <tr>
+      <td><a href="{{ url_for('tasks.view_task', task_id=task.id) }}">{{ task.title }}</a></td>
+      <td>{{ task.department.name if task.department else "—" }}</td>
+      <td>{{ task.assignee.full_name if task.assignee else "—" }}</td>
+      <td>{{ task.backup_assignee.full_name if task.backup_assignee else "—" }}</td>
+      <td>{{ task.importance_label }}</td>
+      {% for day in days %}
+      <td class="text-center">
+        {% if task.deadline.day == day %}
+          {% if task.is_done %}
+          <span class="text-success fw-bold" title="Выполнено">✓</span>
+          {% elif task.id in completable_ids %}
+          <form method="post" action="{{ url_for('tasks.complete_task', task_id=task.id) }}">
+            <input type="hidden" name="next" value="{{ request.full_path }}">
+            <button type="submit" class="btn btn-outline-success py-0 px-1" style="font-size: 0.65rem; line-height: 1.4;" title="Отметить выполненным">✓</button>
+          </form>
+          {% else %}
+          <span class="status-dot status-{{ task.status_color }}" title="{{ task.status_label }}"></span>
+          {% endif %}
+        {% endif %}
+      </td>
+      {% endfor %}
+    </tr>
+    {% else %}
+    <tr><td colspan="{{ 5 + (days|length) }}" class="text-center text-muted py-4">Задач сетевого графика на этот месяц нет</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

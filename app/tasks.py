@@ -13,7 +13,7 @@ from flask_login import current_user, login_required
 from werkzeug.utils import secure_filename
 
 from app.extensions import db
-from app.forms import AttachmentForm, CommentForm, TaskForm
+from app.forms import AttachmentForm, CommentForm, ScheduleTaskForm, TaskForm
 from app.models import (
     Attachment, Comment, Department, ROLE_ADMIN, ROLE_EXECUTOR, ROLE_MANAGER,
     STATUS_LABELS, TASK_TYPE_LABELS, TASK_TYPE_NETWORK_SCHEDULE, Task, User,
@@ -329,6 +329,101 @@ def schedule_list_view():
         next_month=next_month,
         next_year=next_year,
         can_manage_schedule=user_can_manage_schedule(current_user),
+    )
+
+
+@bp.route("/schedule/grid")
+@login_required
+def schedule_grid_view():
+    today = datetime.now()
+    year = request.args.get("year", type=int, default=today.year)
+    month = request.args.get("month", type=int, default=today.month)
+    if month < 1:
+        month, year = 12, year - 1
+    elif month > 12:
+        month, year = 1, year + 1
+
+    query = visible_tasks_query().filter(Task.task_type == TASK_TYPE_NETWORK_SCHEDULE)
+    tasks = sorted(
+        (t for t in query.all() if t.deadline.year == year and t.deadline.month == month),
+        key=lambda t: t.deadline,
+    )
+    completable_ids = {t.id for t in tasks if not t.is_done and can_complete_task(t)}
+
+    days_in_month = calendar_module.monthrange(year, month)[1]
+    prev_month, prev_year = (12, year - 1) if month == 1 else (month - 1, year)
+    next_month, next_year = (1, year + 1) if month == 12 else (month + 1, year)
+
+    return render_template(
+        "tasks/schedule_grid.html",
+        tasks=tasks,
+        completable_ids=completable_ids,
+        days=range(1, days_in_month + 1),
+        year=year,
+        month=month,
+        month_name=RU_MONTH_NAMES[month],
+        prev_month=prev_month,
+        prev_year=prev_year,
+        next_month=next_month,
+        next_year=next_year,
+        can_manage_schedule=user_can_manage_schedule(current_user),
+    )
+
+
+@bp.route("/schedule/new", methods=["GET", "POST"])
+@login_required
+def new_schedule_task():
+    if not user_can_manage_schedule(current_user):
+        abort(403)
+
+    today = datetime.now()
+    year = request.args.get("year", type=int, default=today.year)
+    month = request.args.get("month", type=int, default=today.month)
+    if month < 1:
+        month, year = 12, year - 1
+    elif month > 12:
+        month, year = 1, year + 1
+
+    days_in_month = calendar_module.monthrange(year, month)[1]
+
+    form = ScheduleTaskForm()
+    is_admin = current_user.role == ROLE_ADMIN
+    if is_admin:
+        form.department_id.choices = _department_choices()
+        dept_for_users = None
+    else:
+        form.department_id.choices = [(current_user.department_id, current_user.department.name)]
+        dept_for_users = current_user.department_id
+        if request.method == "GET":
+            form.department_id.data = current_user.department_id
+    form.assignee_id.choices = _user_choices(dept_for_users)
+    form.backup_assignee_id.choices = [(0, "—")] + _user_choices(dept_for_users)
+    form.dates.choices = [(d, str(d)) for d in range(1, days_in_month + 1)]
+
+    if form.validate_on_submit():
+        created = 0
+        for day in form.dates.data:
+            db.session.add(Task(
+                title=form.title.data.strip(),
+                task_type=TASK_TYPE_NETWORK_SCHEDULE,
+                department_id=form.department_id.data,
+                assignee_id=form.assignee_id.data,
+                backup_assignee_id=form.backup_assignee_id.data or None,
+                importance=form.importance.data,
+                deadline=datetime(year, month, day, 18, 0),
+                created_by_id=current_user.id,
+            ))
+            created += 1
+        db.session.commit()
+        flash(f"Создано задач: {created}", "success")
+        return redirect(url_for("tasks.schedule_grid_view", year=year, month=month))
+
+    return render_template(
+        "tasks/schedule_new.html",
+        form=form,
+        year=year,
+        month=month,
+        month_name=RU_MONTH_NAMES[month],
     )
 
 

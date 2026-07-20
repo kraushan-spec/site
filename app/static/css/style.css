@@ -53,3 +53,12 @@ body {
   opacity: 0.85;
   color: #fff;
 }
+
+.schedule-grid-table th,
+.schedule-grid-table td {
+  min-width: 32px;
+}
+.schedule-grid-table th:nth-child(1),
+.schedule-grid-table td:nth-child(1) {
+  min-width: 220px;
+}
