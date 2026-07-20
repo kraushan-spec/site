@@ -9,10 +9,14 @@
 
 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
   <div class="btn-group" role="group">
+    <a href="{{ url_for('tasks.schedule_grid_view', year=year, month=month) }}" class="btn btn-outline-primary btn-sm">Таблица</a>
     <a href="{{ url_for('tasks.schedule_list_view', year=year, month=month) }}" class="btn btn-primary btn-sm">Список</a>
     <a href="{{ url_for('tasks.schedule_view', year=year, month=month) }}" class="btn btn-outline-primary btn-sm">Календарь</a>
   </div>
   <div class="d-flex gap-2">
+    {% if can_manage_schedule %}
+    <a class="btn btn-success btn-sm" href="{{ url_for('tasks.new_schedule_task', year=year, month=month) }}">+ Добавить задачу(и)</a>
+    {% endif %}
     <a class="btn btn-outline-primary btn-sm" href="{{ url_for('tasks.export_schedule', year=year, month=month) }}">Скачать в Excel</a>
     {% if can_manage_schedule %}
     <form method="post" action="{{ url_for('tasks.clone_schedule', year=year, month=month) }}" onsubmit="return confirm('Создать график на следующий месяц на основе текущего?');">

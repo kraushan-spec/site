@@ -2,9 +2,10 @@ from flask_wtf import FlaskForm
 from flask_wtf.file import FileField
 from wtforms import (
     BooleanField, DateField, DateTimeField, PasswordField, SelectField,
-    StringField, SubmitField, TextAreaField,
+    SelectMultipleField, StringField, SubmitField, TextAreaField,
 )
 from wtforms.validators import DataRequired, Length, Optional
+from wtforms.widgets import CheckboxInput, ListWidget
 
 from app.models import (
     IMPORTANCE_LABELS, ROLE_LABELS, TASK_TYPE_LABELS,
@@ -76,3 +77,19 @@ class ReportForm(FlaskForm):
     date_to = DateField("По", validators=[DataRequired()])
     format = SelectField("Формат", choices=[("xlsx", "Excel (.xlsx)"), ("csv", "CSV")])
     submit_btn = SubmitField("Скачать отчёт")
+
+
+class ScheduleTaskForm(FlaskForm):
+    title = StringField("Название", validators=[DataRequired(), Length(max=500)])
+    department_id = SelectField("Подразделение", coerce=int)
+    assignee_id = SelectField("Исполнитель", coerce=int)
+    backup_assignee_id = SelectField("Замещающий исполнитель", coerce=int, validators=[Optional()])
+    importance = SelectField("Важность", choices=list(IMPORTANCE_LABELS.items()))
+    dates = SelectMultipleField(
+        "Даты (можно выбрать несколько — для повторяющихся задач)",
+        coerce=int,
+        widget=ListWidget(prefix_label=False),
+        option_widget=CheckboxInput(),
+        validators=[DataRequired(message="Отметьте хотя бы одну дату")],
+    )
+    submit_btn = SubmitField("Создать")
