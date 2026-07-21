@@ -62,3 +62,17 @@ body {
 .schedule-grid-table td:nth-child(1) {
   min-width: 220px;
 }
+
+.schedule-done-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: #198754;
+  color: #fff;
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1;
+}

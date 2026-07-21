@@ -52,14 +52,17 @@
       <td class="text-center">
         {% if task.deadline.day == day %}
           {% if task.is_done %}
-          <span class="text-success fw-bold" title="Выполнено">✓</span>
+          <a href="{{ url_for('tasks.view_task', task_id=task.id) }}" class="schedule-done-mark" title="Выполнено — открыть эту дату">✓</a>
           {% elif task.id in completable_ids %}
-          <form method="post" action="{{ url_for('tasks.complete_task', task_id=task.id) }}">
-            <input type="hidden" name="next" value="{{ request.full_path }}">
-            <button type="submit" class="btn btn-outline-success py-0 px-1" style="font-size: 0.65rem; line-height: 1.4;" title="Отметить выполненным">✓</button>
-          </form>
+          <div class="d-flex align-items-center justify-content-center gap-1">
+            <a href="{{ url_for('tasks.view_task', task_id=task.id) }}" class="status-dot status-{{ task.status_color }}" title="Открыть эту дату"></a>
+            <form method="post" action="{{ url_for('tasks.complete_task', task_id=task.id) }}">
+              <input type="hidden" name="next" value="{{ request.full_path }}">
+              <button type="submit" class="btn btn-outline-success py-0 px-1" style="font-size: 0.65rem; line-height: 1.4;" title="Отметить выполненным">✓</button>
+            </form>
+          </div>
           {% else %}
-          <span class="status-dot status-{{ task.status_color }}" title="{{ task.status_label }}"></span>
+          <a href="{{ url_for('tasks.view_task', task_id=task.id) }}" class="status-dot status-{{ task.status_color }}" title="{{ task.status_label }} — открыть эту дату"></a>
           {% endif %}
         {% endif %}
       </td>

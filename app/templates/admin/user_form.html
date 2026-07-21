@@ -41,4 +41,12 @@
     <a href="{{ url_for('admin.users') }}" class="btn btn-outline-secondary">Отмена</a>
   </div>
 </form>
+
+{% if user %}
+<hr class="my-4" style="max-width: 600px;">
+<form method="post" action="{{ url_for('admin.reset_password', user_id=user.id) }}" onsubmit="return confirm('Сгенерировать новый пароль для {{ user.full_name }}? Старый перестанет работать.');">
+  <button type="submit" class="btn btn-outline-danger btn-sm">Сбросить пароль</button>
+  <span class="text-muted small ms-2">Сгенерирует новый случайный пароль и покажет его один раз</span>
+</form>
+{% endif %}
 {% endblock %}
