@@ -1,3 +1,5 @@
+import secrets
+import string
 from datetime import datetime
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
@@ -79,6 +81,26 @@ def edit_user(user_id):
             return redirect(url_for("admin.users"))
 
     return render_template("admin/user_form.html", form=form, user=user)
+
+
+def _generate_password(length=10):
+    alphabet = string.ascii_letters + string.digits
+    return "".join(secrets.choice(alphabet) for _ in range(length))
+
+
+@bp.route("/users/<int:user_id>/reset-password", methods=["POST"])
+@roles_required(ROLE_ADMIN)
+def reset_password(user_id):
+    user = User.query.get_or_404(user_id)
+    new_password = _generate_password()
+    user.set_password(new_password)
+    db.session.commit()
+    flash(
+        f"Новый пароль для {user.full_name} ({user.login}): {new_password} — "
+        "сохраните сейчас, повторно он нигде не показывается.",
+        "warning",
+    )
+    return redirect(url_for("admin.edit_user", user_id=user.id))
 
 
 @bp.route("/departments")

@@ -575,9 +575,21 @@ def view_task(task_id):
     task = Task.query.get_or_404(task_id)
     if not can_view_task(task):
         abort(403)
+
+    related_dates = []
+    if task.task_type == TASK_TYPE_NETWORK_SCHEDULE:
+        related_dates = Task.query.filter(
+            Task.task_type == TASK_TYPE_NETWORK_SCHEDULE,
+            Task.title == task.title,
+            Task.department_id == task.department_id,
+            Task.assignee_id == task.assignee_id,
+            Task.id != task.id,
+        ).order_by(Task.deadline).all()
+
     return render_template(
         "tasks/detail.html",
         task=task,
+        related_dates=related_dates,
         comment_form=CommentForm(),
         attachment_form=AttachmentForm(),
         can_manage=can_manage_task(task),

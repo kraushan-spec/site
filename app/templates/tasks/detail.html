@@ -32,6 +32,26 @@
   </div>
 </div>
 
+{% if related_dates %}
+<div class="card mb-4">
+  <div class="card-body">
+    <h6 class="card-title">Другие даты этого задания</h6>
+    <table class="table table-sm mb-0">
+      <thead><tr><th>Дата</th><th>Статус</th><th></th></tr></thead>
+      <tbody>
+        {% for rt in related_dates %}
+        <tr>
+          <td>{{ rt.deadline.strftime("%d.%m.%Y") }}</td>
+          <td><span class="badge bg-{{ rt.status_color }}">{{ "✓ Выполнено" if rt.is_done else rt.status_label }}</span></td>
+          <td><a href="{{ url_for('tasks.view_task', task_id=rt.id) }}">Открыть</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
 {% if can_reassign %}
 <div class="card mb-4">
   <div class="card-body">
