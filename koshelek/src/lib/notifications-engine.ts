@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { differenceInCalendarDays, startOfDay } from "date-fns";
 import { nextOccurrence } from "@/lib/finance";
+import { sendPushToUsers } from "@/lib/push";
 
 const REMINDER_WINDOWS = [60, 30, 14, 7, 3, 1, 0];
 
@@ -34,6 +35,12 @@ async function upsertNotification(opts: {
       relatedEntityId: opts.relatedEntityId,
     },
   });
+
+  const members = await prisma.user.findMany({ where: { householdId: opts.householdId }, select: { id: true } });
+  await sendPushToUsers(
+    members.map((m) => m.id),
+    { title: opts.title, body: opts.body, url: "/tasks" },
+  ).catch((e) => console.error("sendPushToUsers", e));
 }
 
 /**
