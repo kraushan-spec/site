@@ -1,0 +1,397 @@
+// Кошелёк Онлайн — data model
+// SQLite for zero-config real persistence between sessions.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Identity ----------
+
+model Household {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  users        User[]
+  accounts     Account[]
+  categories   Category[]
+  transactions Transaction[]
+  credits      Credit[]
+  goals        Goal[]
+  contracts    Contract[]
+  comments     Comment[]
+  tasks        Task[]
+  notifications Notification[]
+  integrations ApiIntegration[]
+}
+
+enum UserRole {
+  OWNER
+  MEMBER
+}
+
+model User {
+  id           String   @id @default(cuid())
+  householdId  String
+  household    Household @relation(fields: [householdId], references: [id])
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         UserRole @default(OWNER)
+  createdAt    DateTime @default(now())
+
+  comments      Comment[]
+  notifications Notification[]
+}
+
+// ---------- Accounts / Categories ----------
+
+model Account {
+  id             String   @id @default(cuid())
+  householdId    String
+  household      Household @relation(fields: [householdId], references: [id])
+  name           String
+  type           String   @default("card") // card | cash | deposit | other
+  currency       String   @default("KZT")
+  initialBalance Float    @default(0)
+  isDefault      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  transactions Transaction[]
+}
+
+enum CategoryType {
+  INCOME
+  EXPENSE
+}
+
+model Category {
+  id          String       @id @default(cuid())
+  householdId String?
+  household   Household?   @relation(fields: [householdId], references: [id])
+  type        CategoryType
+  name        String
+  icon        String       @default("💳")
+  isSystem    Boolean      @default(false)
+
+  transactions Transaction[]
+}
+
+// ---------- Income & Expenses ----------
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+enum TxStatus {
+  PLANNED
+  DONE
+  OVERDUE
+}
+
+enum DataSource {
+  MANUAL
+  API
+  AI
+  USER_COMMENT
+  CALCULATED
+}
+
+model Transaction {
+  id            String          @id @default(cuid())
+  householdId   String
+  household     Household       @relation(fields: [householdId], references: [id])
+  accountId     String?
+  account       Account?        @relation(fields: [accountId], references: [id])
+  type          TransactionType
+  categoryId    String?
+  category      Category?       @relation(fields: [categoryId], references: [id])
+  subcategory   String?
+  description   String?
+  amount        Float
+  date          DateTime
+  isMandatory   Boolean         @default(false)
+  isRecurring   Boolean         @default(false)
+  recurrenceDay Int? // day-of-month for recurring items
+  paymentMethod String?
+  status        TxStatus        @default(DONE)
+  source        DataSource      @default(MANUAL)
+  comment       String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([householdId, type, date])
+}
+
+// ---------- Credits ----------
+
+enum PaymentType {
+  ANNUITY
+  DIFFERENTIATED
+}
+
+model Credit {
+  id                    String      @id @default(cuid())
+  householdId           String
+  household             Household   @relation(fields: [householdId], references: [id])
+  bank                  String
+  name                  String
+  principal             Float
+  currentBalance        Float
+  monthlyPayment        Float
+  interestRate          Float // nominal, %
+  apr                   Float? // ГЭСВ, %
+  paymentDay            Int // day of month
+  remainingPayments     Int
+  startDate             DateTime
+  endDate               DateTime
+  paymentType           PaymentType @default(ANNUITY)
+  earlyRepaymentAllowed Boolean     @default(true)
+  comment               String?
+  isClosed              Boolean     @default(false)
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+}
+
+// ---------- Goals ----------
+
+model Goal {
+  id            String    @id @default(cuid())
+  householdId   String
+  household     Household @relation(fields: [householdId], references: [id])
+  name          String
+  type          String // credit_payoff | reserve | travel | purchase | other
+  targetAmount  Float
+  savedAmount   Float     @default(0)
+  targetDate    DateTime?
+  comment       String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+// ---------- Tenders / Contracts ----------
+
+enum ContractStage {
+  WON
+  SIGNED
+  ACTIVE
+  PREPARATION
+  DELIVERY
+  ACT
+  PAYMENT
+  EXECUTED
+  CLOSED
+  WARRANTY
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model Contract {
+  id                 String        @id @default(cuid())
+  householdId        String
+  household          Household     @relation(fields: [householdId], references: [id])
+  announcementNumber String?
+  contractNumber     String?
+  title              String
+  customer           String?
+  supplier           String?
+  bin                String?
+  amount             Float
+  signDate           DateTime?
+  startDate          DateTime?
+  endDate            DateTime?
+  subject            String?
+  procurementMethod  String?
+  stage              ContractStage @default(WON)
+  riskLevel          RiskLevel     @default(LOW)
+  riskReason         String?
+  warrantyStart      DateTime?
+  warrantyEnd        DateTime?
+  source             DataSource    @default(MANUAL)
+  comment            String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  payments   ContractPayment[]
+  acts       ContractAct[]
+  documents  ContractDocument[]
+  changes    ContractChange[]
+  extractions ContractExtraction[]
+
+  @@index([householdId, stage])
+}
+
+enum PaymentStatus {
+  EXPECTED
+  RECEIVED
+  OVERDUE
+}
+
+model ContractPayment {
+  id            String        @id @default(cuid())
+  contractId    String
+  contract      Contract      @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  amount        Float
+  expectedDate  DateTime?
+  receivedDate  DateTime?
+  status        PaymentStatus @default(EXPECTED)
+  source        DataSource    @default(MANUAL)
+  comment       String?
+  createdAt     DateTime      @default(now())
+}
+
+enum ActStatus {
+  CREATED
+  SENT
+  APPROVED
+  PAID
+  OVERDUE
+}
+
+model ContractAct {
+  id         String    @id @default(cuid())
+  contractId String
+  contract   Contract  @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  number     String?
+  amount     Float?
+  date       DateTime?
+  status     ActStatus @default(CREATED)
+  penalty    Float?
+  comment    String?
+  createdAt  DateTime  @default(now())
+}
+
+model ContractDocument {
+  id            String   @id @default(cuid())
+  contractId    String
+  contract      Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  filename      String
+  docType       String   @default("contract") // contract | addendum | spec | invoice | act | waybill | payment_doc | correspondence | other
+  storedPath    String
+  mimeType      String?
+  size          Int?
+  extractedText String?
+  uploadedAt    DateTime @default(now())
+}
+
+// Immutable change-history log — never deleted or overwritten.
+model ContractChange {
+  id             String     @id @default(cuid())
+  contractId     String
+  contract       Contract   @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  field          String
+  oldValue       String?
+  newValue       String?
+  reason         String?
+  impactOnDate   String?
+  impactOnAmount String?
+  source         DataSource @default(MANUAL)
+  changedAt      DateTime   @default(now())
+}
+
+// Results of AI reading of an uploaded contract document.
+model ContractExtraction {
+  id                String   @id @default(cuid())
+  contractId        String
+  contract          Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  documentId        String?
+  field             String // e.g. "стороны", "сумма", "аванс", "неустойка"...
+  value             String
+  requiresAttention Boolean  @default(false)
+  createdAt         DateTime @default(now())
+}
+
+// ---------- Comments (polymorphic, immutable history) ----------
+
+enum EntityType {
+  INCOME
+  EXPENSE
+  CREDIT
+  GOAL
+  CONTRACT
+  CONTRACT_CHANGE
+  ACT
+  PAYMENT
+  TASK
+  DOCUMENT
+  AI_RECOMMENDATION
+}
+
+model Comment {
+  id          String     @id @default(cuid())
+  householdId String
+  household   Household  @relation(fields: [householdId], references: [id])
+  entityType  EntityType
+  entityId    String
+  authorId    String?
+  author      User?      @relation(fields: [authorId], references: [id])
+  text        String
+  createdAt   DateTime   @default(now())
+
+  @@index([householdId, entityType, entityId])
+}
+
+// ---------- Task center & notifications ----------
+
+enum TaskPriority {
+  TODAY
+  WEEK
+  LATER
+}
+
+model Task {
+  id                String       @id @default(cuid())
+  householdId       String
+  household         Household    @relation(fields: [householdId], references: [id])
+  title             String
+  description       String?
+  dueDate           DateTime?
+  priority          TaskPriority @default(WEEK)
+  relatedEntityType EntityType?
+  relatedEntityId   String?
+  isDone            Boolean      @default(false)
+  source            DataSource   @default(MANUAL)
+  createdAt         DateTime     @default(now())
+}
+
+model Notification {
+  id                String     @id @default(cuid())
+  householdId       String
+  household         Household  @relation(fields: [householdId], references: [id])
+  userId            String?
+  user              User?      @relation(fields: [userId], references: [id])
+  type              String // credit_due | mandatory_due | shortfall | budget_exceeded | contract_new | contract_change | contract_deadline | act_update | payment_update | warranty_ending
+  title             String
+  body              String
+  dueAt             DateTime?
+  isRead            Boolean    @default(false)
+  relatedEntityType EntityType?
+  relatedEntityId   String?
+  createdAt         DateTime   @default(now())
+}
+
+// ---------- External integrations ----------
+
+model ApiIntegration {
+  id            String    @id @default(cuid())
+  householdId   String
+  household     Household @relation(fields: [householdId], references: [id])
+  provider      String    @default("goszakupki")
+  bin           String?
+  tokenEncrypted String?
+  isActive      Boolean   @default(false)
+  lastSyncAt    DateTime?
+  lastSyncStatus String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
