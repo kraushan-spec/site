@@ -10,6 +10,7 @@ export async function GET() {
     const credits = await prisma.credit.findMany({
       where: { householdId: user.householdId },
       orderBy: [{ isClosed: "asc" }, { currentBalance: "desc" }],
+      include: { payments: { orderBy: { paidDate: "desc" } } },
     });
     return NextResponse.json({ credits });
   } catch (err) {

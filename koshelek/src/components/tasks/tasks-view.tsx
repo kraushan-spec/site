@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, Check, Trash2, Bell, BellOff, X } from "lucide-react";
+import { Plus, Check, Trash2, Bell, BellOff, X, MessageSquare } from "lucide-react";
 import { formatDate } from "@/lib/format";
+import { CommentThread } from "@/components/comments/comment-thread";
 
 type ActionItem = {
   id: string;
@@ -91,6 +92,7 @@ export function TasksView() {
   const [notifications, setNotifications] = useState<NotificationDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNotifications, setShowNotifications] = useState(true);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -150,25 +152,39 @@ export function TasksView() {
               <div className="space-y-2">
                 {bucketItems.map((item) => {
                   const isManualTask = item.id.startsWith("task:");
+                  const taskId = item.id.replace("task:", "");
                   return (
-                    <div
-                      key={item.id}
-                      className={`card p-3 border-l-4 ${COLOR_BORDER[item.color]} flex items-center gap-3`}
-                    >
-                      {isManualTask && (
-                        <button onClick={() => completeTask(item.id)} className="p-1.5 rounded-lg border border-border hover:bg-success-bg hover:text-success shrink-0" title="Отметить выполненным">
-                          <Check size={14} />
-                        </button>
-                      )}
-                      <Link href={item.href} className="min-w-0 flex-1">
-                        <div className="text-sm font-semibold truncate">{item.title}</div>
-                        {item.subtitle && <div className="text-xs text-muted truncate">{item.subtitle}</div>}
-                      </Link>
-                      {item.dueDate && <span className="text-xs text-muted shrink-0">{formatDate(item.dueDate)}</span>}
-                      {isManualTask && (
-                        <button onClick={() => deleteTask(item.id)} className="p-1.5 rounded-lg hover:bg-danger-bg text-danger shrink-0">
-                          <Trash2 size={14} />
-                        </button>
+                    <div key={item.id} className={`card p-3 border-l-4 ${COLOR_BORDER[item.color]}`}>
+                      <div className="flex items-center gap-3">
+                        {isManualTask && (
+                          <button onClick={() => completeTask(item.id)} className="p-1.5 rounded-lg border border-border hover:bg-success-bg hover:text-success shrink-0" title="Отметить выполненным">
+                            <Check size={14} />
+                          </button>
+                        )}
+                        <Link href={item.href} className="min-w-0 flex-1">
+                          <div className="text-sm font-semibold truncate">{item.title}</div>
+                          {item.subtitle && <div className="text-xs text-muted truncate">{item.subtitle}</div>}
+                        </Link>
+                        {item.dueDate && <span className="text-xs text-muted shrink-0">{formatDate(item.dueDate)}</span>}
+                        {isManualTask && (
+                          <button
+                            onClick={() => setExpandedId(expandedId === taskId ? null : taskId)}
+                            className="p-1.5 rounded-lg hover:bg-[#eceefb] text-muted shrink-0"
+                            title="Комментарии"
+                          >
+                            <MessageSquare size={14} />
+                          </button>
+                        )}
+                        {isManualTask && (
+                          <button onClick={() => deleteTask(item.id)} className="p-1.5 rounded-lg hover:bg-danger-bg text-danger shrink-0">
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                      </div>
+                      {isManualTask && expandedId === taskId && (
+                        <div className="mt-2 pt-2 border-t border-border">
+                          <CommentThread entityType="TASK" entityId={taskId} compact />
+                        </div>
                       )}
                     </div>
                   );

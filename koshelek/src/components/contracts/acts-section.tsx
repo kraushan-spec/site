@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, MessageSquare } from "lucide-react";
 import { formatDate, formatTenge } from "@/lib/format";
+import { CommentThread } from "@/components/comments/comment-thread";
 
 export type ActDto = {
   id: string;
@@ -34,6 +35,7 @@ export function ActsSection({ contractId, acts, onChange }: { contractId: string
   const [number, setNumber] = useState("");
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState("");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   async function add() {
     await fetch(`/api/contracts/${contractId}/acts`, {
@@ -81,24 +83,38 @@ export function ActsSection({ contractId, acts, onChange }: { contractId: string
       <div className="space-y-1.5">
         {acts.length === 0 && <p className="text-sm text-muted">Акты не добавлены</p>}
         {acts.map((a) => (
-          <div key={a.id} className="flex items-center gap-2 text-sm py-1.5 border-b border-border last:border-0">
-            <span className="font-semibold">№{a.number ?? "—"}</span>
-            <span className="text-muted">{a.amount ? formatTenge(a.amount) : ""}</span>
-            <span className="text-xs text-muted">{a.date ? formatDate(a.date) : ""}</span>
-            {a.penalty ? <span className="badge badge-danger">неустойка {formatTenge(a.penalty)}</span> : null}
-            <select
-              className="ml-auto text-xs border border-border rounded-lg px-2 py-1"
-              value={a.status}
-              onChange={(e) => setStatus(a.id, e.target.value as ActDto["status"])}
-            >
-              {Object.entries(STATUS_LABEL).map(([k, v]) => (
-                <option key={k} value={k}>{v}</option>
-              ))}
-            </select>
-            <span className={`badge ${STATUS_BADGE[a.status]}`}>{STATUS_LABEL[a.status]}</span>
-            <button onClick={() => remove(a.id)} className="p-1 rounded hover:bg-danger-bg text-danger">
-              <Trash2 size={14} />
-            </button>
+          <div key={a.id} className="border-b border-border last:border-0">
+            <div className="flex items-center gap-2 text-sm py-1.5">
+              <span className="font-semibold">№{a.number ?? "—"}</span>
+              <span className="text-muted">{a.amount ? formatTenge(a.amount) : ""}</span>
+              <span className="text-xs text-muted">{a.date ? formatDate(a.date) : ""}</span>
+              {a.penalty ? <span className="badge badge-danger">неустойка {formatTenge(a.penalty)}</span> : null}
+              <select
+                className="ml-auto text-xs border border-border rounded-lg px-2 py-1"
+                value={a.status}
+                onChange={(e) => setStatus(a.id, e.target.value as ActDto["status"])}
+              >
+                {Object.entries(STATUS_LABEL).map(([k, v]) => (
+                  <option key={k} value={k}>{v}</option>
+                ))}
+              </select>
+              <span className={`badge ${STATUS_BADGE[a.status]}`}>{STATUS_LABEL[a.status]}</span>
+              <button
+                onClick={() => setExpandedId(expandedId === a.id ? null : a.id)}
+                className="p-1 rounded hover:bg-[#eceefb] text-muted"
+                title="Комментарии"
+              >
+                <MessageSquare size={14} />
+              </button>
+              <button onClick={() => remove(a.id)} className="p-1 rounded hover:bg-danger-bg text-danger">
+                <Trash2 size={14} />
+              </button>
+            </div>
+            {expandedId === a.id && (
+              <div className="pb-2">
+                <CommentThread entityType="ACT" entityId={a.id} compact />
+              </div>
+            )}
           </div>
         ))}
       </div>

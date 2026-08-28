@@ -130,6 +130,110 @@ function MembersSection() {
   );
 }
 
+function urlBase64ToUint8Array(base64String: string) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const raw = atob(base64);
+  return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
+}
+
+function PushSection() {
+  const [supported, setSupported] = useState(false);
+  const [configured, setConfigured] = useState(false);
+  const [subscribed, setSubscribed] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+      setSupported(true);
+      const [keyRes, reg] = await Promise.all([
+        fetch("/api/push/public-key").then((r) => r.json()),
+        navigator.serviceWorker.ready,
+      ]);
+      setConfigured(!!keyRes.configured);
+      const sub = await reg.pushManager.getSubscription();
+      setSubscribed(!!sub);
+    })();
+  }, []);
+
+  async function subscribe() {
+    setBusy(true);
+    setError(null);
+    try {
+      const keyRes = await fetch("/api/push/public-key").then((r) => r.json());
+      if (!keyRes.configured) {
+        setError("Push-уведомления не настроены на сервере");
+        return;
+      }
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") {
+        setError("Разрешение на уведомления не выдано");
+        return;
+      }
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(keyRes.publicKey),
+      });
+      await fetch("/api/push/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(sub.toJSON()),
+      });
+      setSubscribed(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Не удалось подписаться");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function unsubscribe() {
+    setBusy(true);
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if (sub) {
+        await fetch("/api/push/subscribe", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ endpoint: sub.endpoint }),
+        });
+        await sub.unsubscribe();
+      }
+      setSubscribed(false);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!supported) {
+    return <p className="text-xs text-muted mt-2">Этот браузер не поддерживает push-уведомления.</p>;
+  }
+
+  return (
+    <div className="mt-3 pt-3 border-t border-border">
+      {!configured ? (
+        <p className="text-xs text-muted">Push-уведомления в браузер пока не настроены администратором сервера.</p>
+      ) : subscribed ? (
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-success font-semibold">Push-уведомления включены на этом устройстве</span>
+          <button className="btn btn-outline btn-sm" disabled={busy} onClick={unsubscribe}>
+            Отключить
+          </button>
+        </div>
+      ) : (
+        <button className="btn btn-secondary btn-sm" disabled={busy} onClick={subscribe}>
+          Включить push-уведомления на этом устройстве
+        </button>
+      )}
+      {error && <p className="text-xs text-danger mt-1.5">{error}</p>}
+    </div>
+  );
+}
+
 function GoszakupkiSection() {
   const [status, setStatus] = useState<GoszakupkiStatus | null>(null);
   const [bin, setBin] = useState("");
@@ -236,6 +340,7 @@ export function SettingsView() {
           Приложение автоматически напоминает о платежах по кредитам, обязательных расходах и важных событиях по
           договорам за 60 / 30 / 14 / 7 / 3 / 1 день до срока. Все уведомления собраны в разделе «Задачи».
         </p>
+        <PushSection />
       </Section>
 
       <Section icon={Database} title="Данные и резервная копия">

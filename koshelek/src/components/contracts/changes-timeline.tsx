@@ -1,5 +1,9 @@
-import { History } from "lucide-react";
+"use client";
+
+import { useState } from "react";
+import { History, MessageSquare } from "lucide-react";
 import { formatDate } from "@/lib/format";
+import { CommentThread } from "@/components/comments/comment-thread";
 
 export type ChangeDto = {
   id: string;
@@ -20,6 +24,8 @@ const SOURCE_LABEL: Record<string, string> = {
 };
 
 export function ChangesTimeline({ changes }: { changes: ChangeDto[] }) {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
   return (
     <div className="card p-4">
       <div className="flex items-center gap-2 mb-3">
@@ -33,6 +39,13 @@ export function ChangesTimeline({ changes }: { changes: ChangeDto[] }) {
             <div className="flex items-center gap-2 text-xs text-muted">
               <span>🔔 {formatDate(c.changedAt)}</span>
               <span className="badge badge-neutral">{SOURCE_LABEL[c.source]}</span>
+              <button
+                onClick={() => setExpandedId(expandedId === c.id ? null : c.id)}
+                className="ml-auto p-1 rounded hover:bg-[#eceefb] text-muted"
+                title="Комментарии"
+              >
+                <MessageSquare size={13} />
+              </button>
             </div>
             <div className="text-sm font-semibold mt-0.5">{c.field}</div>
             <div className="text-sm mt-0.5">
@@ -41,6 +54,11 @@ export function ChangesTimeline({ changes }: { changes: ChangeDto[] }) {
               <span className="font-semibold">{c.newValue || "—"}</span>
             </div>
             {c.reason && <div className="text-xs text-muted mt-0.5">Причина: {c.reason}</div>}
+            {expandedId === c.id && (
+              <div className="mt-2">
+                <CommentThread entityType="CONTRACT_CHANGE" entityId={c.id} compact />
+              </div>
+            )}
           </div>
         ))}
       </div>

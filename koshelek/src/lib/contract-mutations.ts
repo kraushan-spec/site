@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { assessContractRisk, contractTermProgress, stageExecutionPercent } from "@/lib/contracts";
+import { sendPushToUsers } from "@/lib/push";
 import type { DataSource } from "@prisma/client";
 
 const TRACKED_FIELDS: { key: "title" | "amount" | "startDate" | "endDate" | "stage" | "customer" | "subject"; label: string }[] = [
@@ -61,16 +62,23 @@ export async function logContractChanges(
 
   const contract = await prisma.contract.findUnique({ where: { id: contractId } });
   if (contract) {
+    const title = `Изменение в договоре №${contract.contractNumber ?? contract.id.slice(0, 6)}`;
+    const body = changes.map((c) => `${c.field}: ${c.oldValue} → ${c.newValue}`).join("; ");
     await prisma.notification.create({
       data: {
         householdId: contract.householdId,
         type: "contract_change",
-        title: `Изменение в договоре №${contract.contractNumber ?? contract.id.slice(0, 6)}`,
-        body: changes.map((c) => `${c.field}: ${c.oldValue} → ${c.newValue}`).join("; "),
+        title,
+        body,
         relatedEntityType: "CONTRACT",
         relatedEntityId: contract.id,
       },
     });
+    const members = await prisma.user.findMany({ where: { householdId: contract.householdId }, select: { id: true } });
+    await sendPushToUsers(
+      members.map((m) => m.id),
+      { title, body, url: `/tenders/${contract.id}` },
+    ).catch((e) => console.error("sendPushToUsers", e));
   }
 
   return created;

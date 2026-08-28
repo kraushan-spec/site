@@ -1,8 +1,9 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Upload, FileText, Trash2, Sparkles, AlertTriangle } from "lucide-react";
+import { Upload, FileText, Trash2, Sparkles, AlertTriangle, MessageSquare } from "lucide-react";
 import { formatDate } from "@/lib/format";
+import { CommentThread } from "@/components/comments/comment-thread";
 
 export type DocumentDto = {
   id: string;
@@ -51,6 +52,7 @@ export function DocumentsSection({
   const [analyzingId, setAnalyzingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lastAnalyzedDoc, setLastAnalyzedDoc] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   async function upload(file: File) {
     setUploading(true);
@@ -121,24 +123,38 @@ export function DocumentsSection({
       <div className="space-y-1.5 mb-3">
         {documents.length === 0 && <p className="text-sm text-muted">Документы не загружены</p>}
         {documents.map((d) => (
-          <div key={d.id} className="flex items-center gap-2 text-sm py-1.5 border-b border-border last:border-0">
-            <FileText size={16} className="text-muted shrink-0" />
-            <a href={`/api/contracts/${contractId}/documents/${d.id}`} className="flex-1 min-w-0 truncate hover:underline">
-              {d.filename}
-            </a>
-            <span className="badge badge-neutral shrink-0">{DOC_TYPES.find((t) => t.value === d.docType)?.label ?? d.docType}</span>
-            <span className="text-xs text-muted shrink-0">{formatDate(d.uploadedAt)}</span>
-            <button
-              className="btn btn-outline btn-sm shrink-0"
-              disabled={analyzingId === d.id || !d.extractedText}
-              title={!d.extractedText ? "Текст не удалось извлечь из этого формата" : "Прочитать AI"}
-              onClick={() => analyze(d.id)}
-            >
-              <Sparkles size={13} /> {analyzingId === d.id ? "Читаем..." : "AI-анализ"}
-            </button>
-            <button onClick={() => remove(d.id)} className="p-1.5 rounded-lg hover:bg-danger-bg text-danger shrink-0">
-              <Trash2 size={14} />
-            </button>
+          <div key={d.id} className="border-b border-border last:border-0">
+            <div className="flex items-center gap-2 text-sm py-1.5">
+              <FileText size={16} className="text-muted shrink-0" />
+              <a href={`/api/contracts/${contractId}/documents/${d.id}`} className="flex-1 min-w-0 truncate hover:underline">
+                {d.filename}
+              </a>
+              <span className="badge badge-neutral shrink-0">{DOC_TYPES.find((t) => t.value === d.docType)?.label ?? d.docType}</span>
+              <span className="text-xs text-muted shrink-0">{formatDate(d.uploadedAt)}</span>
+              <button
+                className="btn btn-outline btn-sm shrink-0"
+                disabled={analyzingId === d.id || !d.extractedText}
+                title={!d.extractedText ? "Текст не удалось извлечь из этого формата" : "Прочитать AI"}
+                onClick={() => analyze(d.id)}
+              >
+                <Sparkles size={13} /> {analyzingId === d.id ? "Читаем..." : "AI-анализ"}
+              </button>
+              <button
+                onClick={() => setExpandedId(expandedId === d.id ? null : d.id)}
+                className="p-1.5 rounded-lg hover:bg-[#eceefb] text-muted shrink-0"
+                title="Комментарии"
+              >
+                <MessageSquare size={14} />
+              </button>
+              <button onClick={() => remove(d.id)} className="p-1.5 rounded-lg hover:bg-danger-bg text-danger shrink-0">
+                <Trash2 size={14} />
+              </button>
+            </div>
+            {expandedId === d.id && (
+              <div className="pb-2">
+                <CommentThread entityType="DOCUMENT" entityId={d.id} compact />
+              </div>
+            )}
           </div>
         ))}
       </div>
