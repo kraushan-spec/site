@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Trash2, CheckCircle2 } from "lucide-react";
+import { Plus, Trash2, CheckCircle2, MessageSquare } from "lucide-react";
 import { formatDate, formatTenge } from "@/lib/format";
+import { CommentThread } from "@/components/comments/comment-thread";
 
 export type PaymentDto = {
   id: string;
@@ -28,6 +29,7 @@ export function PaymentsSection({
   const [amount, setAmount] = useState("");
   const [expectedDate, setExpectedDate] = useState("");
   const [saving, setSaving] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const received = payments.filter((p) => p.status === "RECEIVED").reduce((s, p) => s + p.amount, 0);
   const expected = payments.filter((p) => p.status !== "RECEIVED").reduce((s, p) => s + p.amount, 0);
@@ -94,22 +96,36 @@ export function PaymentsSection({
       <div className="space-y-1.5">
         {payments.length === 0 && <p className="text-sm text-muted">Оплаты не добавлены</p>}
         {payments.map((p) => (
-          <div key={p.id} className="flex items-center gap-2 text-sm py-1.5 border-b border-border last:border-0">
-            <span className={`badge ${p.status === "RECEIVED" ? "badge-success" : p.status === "OVERDUE" ? "badge-danger" : "badge-warning"}`}>
-              {p.status === "RECEIVED" ? "Получено" : p.status === "OVERDUE" ? "Просрочено" : "Ожидается"}
-            </span>
-            <span className="flex-1 font-semibold">{formatTenge(p.amount)}</span>
-            <span className="text-xs text-muted">
-              {p.receivedDate ? `Оплачено ${formatDate(p.receivedDate)}` : p.expectedDate ? `Ожидается ${formatDate(p.expectedDate)}` : ""}
-            </span>
-            {p.status !== "RECEIVED" && (
-              <button onClick={() => markReceived(p.id)} className="p-1 rounded hover:bg-success-bg text-success" title="Отметить полученным">
-                <CheckCircle2 size={15} />
+          <div key={p.id} className="border-b border-border last:border-0">
+            <div className="flex items-center gap-2 text-sm py-1.5">
+              <span className={`badge ${p.status === "RECEIVED" ? "badge-success" : p.status === "OVERDUE" ? "badge-danger" : "badge-warning"}`}>
+                {p.status === "RECEIVED" ? "Получено" : p.status === "OVERDUE" ? "Просрочено" : "Ожидается"}
+              </span>
+              <span className="flex-1 font-semibold">{formatTenge(p.amount)}</span>
+              <span className="text-xs text-muted">
+                {p.receivedDate ? `Оплачено ${formatDate(p.receivedDate)}` : p.expectedDate ? `Ожидается ${formatDate(p.expectedDate)}` : ""}
+              </span>
+              {p.status !== "RECEIVED" && (
+                <button onClick={() => markReceived(p.id)} className="p-1 rounded hover:bg-success-bg text-success" title="Отметить полученным">
+                  <CheckCircle2 size={15} />
+                </button>
+              )}
+              <button
+                onClick={() => setExpandedId(expandedId === p.id ? null : p.id)}
+                className="p-1 rounded hover:bg-[#eceefb] text-muted"
+                title="Комментарии"
+              >
+                <MessageSquare size={14} />
               </button>
+              <button onClick={() => remove(p.id)} className="p-1 rounded hover:bg-danger-bg text-danger">
+                <Trash2 size={14} />
+              </button>
+            </div>
+            {expandedId === p.id && (
+              <div className="pb-2">
+                <CommentThread entityType="PAYMENT" entityId={p.id} compact />
+              </div>
             )}
-            <button onClick={() => remove(p.id)} className="p-1 rounded hover:bg-danger-bg text-danger">
-              <Trash2 size={14} />
-            </button>
           </div>
         ))}
       </div>
