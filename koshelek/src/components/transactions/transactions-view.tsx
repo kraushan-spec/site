@@ -29,6 +29,10 @@ export function TransactionsView({ type }: { type: "INCOME" | "EXPENSE" }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [filterCategory, setFilterCategory] = useState<string>("");
   const [filterMandatory, setFilterMandatory] = useState<string>("");
+  const [filterFrom, setFilterFrom] = useState<string>("");
+  const [filterTo, setFilterTo] = useState<string>("");
+  const [filterAmountMin, setFilterAmountMin] = useState<string>("");
+  const [filterAmountMax, setFilterAmountMax] = useState<string>("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -54,13 +58,32 @@ export function TransactionsView({ type }: { type: "INCOME" | "EXPENSE" }) {
   }
 
   const filtered = useMemo(() => {
+    const min = filterAmountMin ? Number(filterAmountMin) : null;
+    const max = filterAmountMax ? Number(filterAmountMax) : null;
     return transactions.filter((t) => {
       if (filterCategory && t.categoryId !== filterCategory) return false;
       if (filterMandatory === "yes" && !t.isMandatory) return false;
       if (filterMandatory === "no" && t.isMandatory) return false;
+      const day = t.date.slice(0, 10);
+      if (filterFrom && day < filterFrom) return false;
+      if (filterTo && day > filterTo) return false;
+      if (min !== null && !Number.isNaN(min) && t.amount < min) return false;
+      if (max !== null && !Number.isNaN(max) && t.amount > max) return false;
       return true;
     });
-  }, [transactions, filterCategory, filterMandatory]);
+  }, [transactions, filterCategory, filterMandatory, filterFrom, filterTo, filterAmountMin, filterAmountMax]);
+
+  const hasActiveFilters =
+    filterCategory || filterMandatory || filterFrom || filterTo || filterAmountMin || filterAmountMax;
+
+  function resetFilters() {
+    setFilterCategory("");
+    setFilterMandatory("");
+    setFilterFrom("");
+    setFilterTo("");
+    setFilterAmountMin("");
+    setFilterAmountMax("");
+  }
 
   const total = filtered.reduce((s, t) => s + t.amount, 0);
 
@@ -114,6 +137,43 @@ export function TransactionsView({ type }: { type: "INCOME" | "EXPENSE" }) {
             <option value="yes">Только обязательные</option>
             <option value="no">Только необязательные</option>
           </select>
+        )}
+        <input
+          type="date"
+          className="input w-auto text-sm"
+          value={filterFrom}
+          onChange={(e) => setFilterFrom(e.target.value)}
+          aria-label="Дата с"
+          title="Дата с"
+        />
+        <input
+          type="date"
+          className="input w-auto text-sm"
+          value={filterTo}
+          onChange={(e) => setFilterTo(e.target.value)}
+          aria-label="Дата по"
+          title="Дата по"
+        />
+        <input
+          type="number"
+          inputMode="decimal"
+          placeholder="Сумма от"
+          className="input w-28 text-sm"
+          value={filterAmountMin}
+          onChange={(e) => setFilterAmountMin(e.target.value)}
+        />
+        <input
+          type="number"
+          inputMode="decimal"
+          placeholder="Сумма до"
+          className="input w-28 text-sm"
+          value={filterAmountMax}
+          onChange={(e) => setFilterAmountMax(e.target.value)}
+        />
+        {hasActiveFilters && (
+          <button className="btn btn-secondary text-sm" onClick={resetFilters}>
+            Сбросить фильтры
+          </button>
         )}
       </div>
 
