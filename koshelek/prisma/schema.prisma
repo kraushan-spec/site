@@ -157,6 +157,18 @@ model Credit {
   isClosed              Boolean     @default(false)
   createdAt             DateTime    @default(now())
   updatedAt             DateTime    @updatedAt
+  payments              CreditPayment[]
+}
+
+model CreditPayment {
+  id        String     @id @default(cuid())
+  creditId  String
+  credit    Credit     @relation(fields: [creditId], references: [id], onDelete: Cascade)
+  amount    Float
+  paidDate  DateTime
+  comment   String?
+  source    DataSource @default(MANUAL)
+  createdAt DateTime   @default(now())
 }
 
 // ---------- Goals ----------

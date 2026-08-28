@@ -4,13 +4,16 @@ import { useCallback, useEffect, useState } from "react";
 import { Plus, Pencil, Trash2, CheckCircle2 } from "lucide-react";
 import { CreditFormModal, type CreditDto } from "./credit-form-modal";
 import { StrategyPanel } from "./strategy-panel";
+import { CreditPaymentsSection, type CreditPaymentDto } from "./credit-payments-section";
 import { CommentThread } from "@/components/comments/comment-thread";
 import { ExportButton } from "@/components/export-button";
 import { formatDate, formatTenge } from "@/lib/format";
 import { creditTotals, nearestCreditPayment } from "@/lib/finance";
 
+type FullCredit = CreditDto & { payments: CreditPaymentDto[] };
+
 export function CreditsView() {
-  const [credits, setCredits] = useState<CreditDto[]>([]);
+  const [credits, setCredits] = useState<FullCredit[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<CreditDto | null>(null);
@@ -129,8 +132,9 @@ export function CreditsView() {
                 </div>
               </div>
               {expandedId === c.id && (
-                <div className="px-4 pb-4 bg-[#fafbfd]">
-                  {c.comment && <p className="text-xs text-muted mb-2 italic">{c.comment}</p>}
+                <div className="px-4 pb-4 bg-[#fafbfd] space-y-3">
+                  {c.comment && <p className="text-xs text-muted italic">{c.comment}</p>}
+                  <CreditPaymentsSection creditId={c.id} payments={c.payments} onChange={load} />
                   <CommentThread entityType="CREDIT" entityId={c.id} compact />
                 </div>
               )}
